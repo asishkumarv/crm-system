@@ -75,8 +75,7 @@ exports.adminLogin = async (req, res) => {
   if (!match) return res.status(400).send("Wrong password");
 
   const token = jwt.sign({ id: u.id, role: "admin" }, "SECRET");
-
-  res.json({ token });
+  res.json({ token, adminId: u.id });
 };
 
 exports.getAllEmployees = async (req, res) => {

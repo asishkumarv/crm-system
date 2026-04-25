@@ -36,7 +36,11 @@ export default function EmployeeDashboard() {
 
   const fetchData = async () => {
     const userId = user?.id || user?.userId;
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     
     try {
       const res = await API.get(`/employee/my-leads/${userId}`);

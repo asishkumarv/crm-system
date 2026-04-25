@@ -32,8 +32,7 @@ exports.employeeLogin = async (req, res) => {
   if (!match) return res.status(400).send("Wrong password");
 
   const token = jwt.sign({ id: u.id, role: "employee" }, "SECRET");
-
-  res.json({ token });
+  res.json({ token, userId: u.id });
 };
 
 exports.approveEmployee = async (req, res) => {
