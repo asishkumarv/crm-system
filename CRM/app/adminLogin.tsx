@@ -81,8 +81,11 @@ export default function AdminLogin() {
                     activeUnderlineColor="#1565C0"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     left={<TextInput.Icon icon="shield-account-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <TextInput
@@ -92,8 +95,11 @@ export default function AdminLogin() {
                     mode="flat"
                     activeUnderlineColor="#1565C0"
                     secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
                     left={<TextInput.Icon icon="key-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <Button 

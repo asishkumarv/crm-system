@@ -356,18 +356,19 @@ export default function AdminDashboard() {
                       <View style={styles.leadMain}>
                         <IconButton 
                           icon={selectedLeads.includes(l.id) ? "checkbox-marked" : "checkbox-blank-outline"} 
-                          iconColor={selectedLeads.includes(l.id) ? "#1A237E" : "#94A3B8"}
-                          onPress={() => toggleLeadSelection(l.id)}
+                          iconColor={selectedLeads.includes(l.id) ? "#1A237E" : (l.assigned_to ? "#E2E8F0" : "#94A3B8")}
+                          onPress={() => !l.assigned_to && toggleLeadSelection(l.id)}
+                          disabled={!!l.assigned_to}
                         />
                         <View style={styles.leadMeta}>
-                          <Text variant="titleMedium" style={styles.leadName}>{l.name}</Text>
+                          <Text variant="titleMedium" style={[styles.leadName, !!l.assigned_to && { color: '#94A3B8' }]}>{l.name}</Text>
                           <View style={styles.sourceTag}>
                             <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} />
                             <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
                             <Text variant="labelSmall" style={styles.sourceText}>{'     Purpose: '+l.query}</Text>
                           </View>
                         </View>
-                        {!selectedLeads.includes(l.id) && (
+                        {!l.assigned_to && !selectedLeads.includes(l.id) && (
                           <IconButton 
                             icon="account-plus-outline" 
                             mode="contained-tonal" 
@@ -379,7 +380,18 @@ export default function AdminDashboard() {
                       <View style={styles.leadFooter}>
                         <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
                         <Text variant="labelSmall" style={styles.phoneText}>{l.email}</Text>
-                        <Chip style={styles.assignChip}>{l.assigned_to ? 'Assigned' : 'Unallocated'}</Chip>
+                        <Chip 
+                          style={[
+                            styles.assignChip, 
+                            l.assigned_to ? styles.assignedChip : styles.unallocatedChip
+                          ]}
+                          textStyle={[
+                            styles.assignChipText,
+                            l.assigned_to ? { color: '#1A237E' } : { color: '#FF8F00' }
+                          ]}
+                        >
+                          {l.assigned_to ? 'Assigned' : 'Unallocated'}
+                        </Chip>
                       </View>
                     </Surface>
                   ))}
@@ -392,19 +404,19 @@ export default function AdminDashboard() {
 
         {/* Portals */}
         <Portal>
-          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)} style={styles.dialog}>
+          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
             <Dialog.Title style={styles.dialogTitle}>Broadcast Email</Dialog.Title>
             <Dialog.Content>
-              <TextInput label="Subject" value={emailContent.subject} onChangeText={t => setEmailContent({...emailContent, subject: t})} mode="outlined" style={styles.dialogInput} />
-              <TextInput label="Message" multiline numberOfLines={5} value={emailContent.message} onChangeText={t => setEmailContent({...emailContent, message: t})} mode="outlined" style={styles.dialogInput} />
+              <TextInput label="Subject" value={emailContent.subject} onChangeText={t => setEmailContent({...emailContent, subject: t})} mode="outlined" style={styles.dialogInput} textColor="#000" />
+              <TextInput label="Message" multiline numberOfLines={5} value={emailContent.message} onChangeText={t => setEmailContent({...emailContent, message: t})} mode="outlined" style={styles.dialogInput} textColor="#000" />
             </Dialog.Content>
-            <Dialog.Actions>
+            <Dialog.Actions style={{ paddingHorizontal: 20 }}>
               <Button onPress={() => setBulkEmailVisible(false)}>Cancel</Button>
-              <Button mode="contained" onPress={handleBulkEmail} buttonColor="#1A237E" textColor="white">Send Broadcast</Button>
+              <Button mode="contained" onPress={handleBulkEmail} buttonColor="#1A237E" textColor="white" style={{ flex: 1, borderRadius: 12 }}>Send Broadcast</Button>
             </Dialog.Actions>
           </Dialog>
 
-          <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)} style={styles.dialog}>
+          <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
             <Dialog.Title style={styles.dialogTitle}>
               {selectedLead ? 'Allocate Lead' : `Bulk Allocate (${selectedLeads.length} Leads)`}
             </Dialog.Title>
@@ -453,21 +465,21 @@ export default function AdminDashboard() {
             </Dialog.Actions>
           </Dialog>
 
-          <Dialog visible={detailsVisible} onDismiss={() => setDetailsVisible(false)} style={styles.dialog}>
+          <Dialog visible={detailsVisible} onDismiss={() => setDetailsVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
             <Dialog.Title style={styles.dialogTitle}>{activeEmployee?.name}'s Portfolio</Dialog.Title>
             <Dialog.Content>
               <View style={styles.dialogStatsHeader}>
                 <View style={styles.dialogStat}>
-                  <Text variant="titleLarge" style={{color: '#FF8F00'}}>{activeEmployee?.contacted_count || 0}</Text>
-                  <Text variant="labelSmall">CONTACTED</Text>
+                  <Text variant="displaySmall" style={{color: '#E65100', fontWeight: '900'}}>{activeEmployee?.contacted_count || 0}</Text>
+                  <Text variant="labelMedium" style={{color: '#E65100', fontWeight: '800'}}>CONTACTED</Text>
                 </View>
                 <View style={styles.dialogStat}>
-                  <Text variant="titleLarge" style={{color: '#00796B'}}>{activeEmployee?.converted_count || 0}</Text>
-                  <Text variant="labelSmall">CONVERTED</Text>
+                  <Text variant="displaySmall" style={{color: '#1B5E20', fontWeight: '900'}}>{activeEmployee?.converted_count || 0}</Text>
+                  <Text variant="labelMedium" style={{color: '#1B5E20', fontWeight: '800'}}>CONVERTED</Text>
                 </View>
               </View>
-              <Divider style={{ marginVertical: 12 }} />
-              <ScrollView style={{ maxHeight: 400 }}>
+              <Divider style={{ marginVertical: 16, height: 2, backgroundColor: '#E2E8F0' }} />
+              <ScrollView style={{ maxHeight: 500 }}>
                 {activeEmployeeData.length === 0 ? (
                   <Text style={styles.emptyMsg}>No leads assigned to this employee yet.</Text>
                 ) : (
@@ -478,30 +490,31 @@ export default function AdminDashboard() {
                         <Chip 
                           style={[
                             styles.statusChip, 
-                            l.status === 'contacted' && { backgroundColor: '#FEF3C7' },
-                            l.status === 'converted' && { backgroundColor: '#D1FAE5' }
+                            l.status === 'contacted' && { backgroundColor: '#FFB300' },
+                            l.status === 'converted' && { backgroundColor: '#2E7D32' },
+                            (!l.status || l.status === 'new') && { backgroundColor: '#1A237E' }
                           ]}
-                          textStyle={{ fontSize: 10, fontWeight: '700' }}
+                          textStyle={{ fontSize: 10, fontWeight: '900', color: '#fff' }}
                         >
                           {l.status?.toUpperCase() || 'NEW'}
                         </Chip>
                       </View>
-                      <Text variant="bodySmall" style={styles.detailLeadPhone}>{l.phone} • {l.source}</Text>
-                      <Text variant="bodySmall" style={styles.detailLeadQuery}>Purpose: {l.query || 'N/A'}</Text>
+                      <Text variant="bodyMedium" style={styles.detailLeadPhone}>{l.phone} • {l.source}</Text>
+                      <Text variant="bodyMedium" style={styles.detailLeadQuery}>Purpose: {l.query || 'N/A'}</Text>
                       {l.last_note && (
-                        <Surface style={styles.noteSurface} elevation={0}>
+                        <Surface style={styles.noteSurface} elevation={1}>
                           <Text variant="labelSmall" style={styles.noteLabel}>STAFF INTERACTION NOTE:</Text>
-                          <Text variant="bodySmall" style={styles.noteText}>"{l.last_note}"</Text>
+                          <Text variant="bodyMedium" style={styles.noteText}>"{l.last_note}"</Text>
                         </Surface>
                       )}
-                      <Divider style={{ marginTop: 12 }} />
+                      <Divider style={{ marginTop: 16, backgroundColor: '#F1F5F9' }} />
                     </View>
                   ))
                 )}
               </ScrollView>
             </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={() => setDetailsVisible(false)}>Close</Button>
+            <Dialog.Actions style={{ paddingHorizontal: 20 }}>
+              <Button mode="contained" onPress={() => setDetailsVisible(false)} buttonColor="#1A237E" textColor="#fff" style={{ flex: 1, borderRadius: 12 }}>Close Portfolio</Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
@@ -726,8 +739,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   assignChip: {
-    height: 24,
-    backgroundColor: '#F1F5F9',
+    height: 28,
+    borderRadius: 8,
+  },
+  assignedChip: {
+    backgroundColor: '#E0E7FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  unallocatedChip: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+  },
+  assignChipText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flex: 1,
@@ -755,6 +783,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#64748B',
     marginBottom: 20,
+  },
+  portfolioDialog: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '95%',
   },
   dialogStatsHeader: {
     flexDirection: 'row',

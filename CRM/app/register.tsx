@@ -127,8 +127,11 @@ export default function Register() {
                     onChangeText={(t) => setForm({ ...form, name: t })}
                     mode="flat"
                     activeUnderlineColor="#1565C0"
+                    autoComplete="name"
+                    textContentType="name"
                     left={<TextInput.Icon icon="account-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <TextInput
@@ -139,8 +142,11 @@ export default function Register() {
                     activeUnderlineColor="#1565C0"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     left={<TextInput.Icon icon="email-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <TextInput
@@ -150,8 +156,11 @@ export default function Register() {
                     mode="flat"
                     activeUnderlineColor="#1565C0"
                     secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
                     left={<TextInput.Icon icon="lock-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <Button 
@@ -358,7 +367,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     marginHorizontal: 12,
-    color: "#9E9E9E",
+    color: "#616161",
     fontSize: 10,
     fontWeight: "700",
   },
@@ -366,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   footerText: {
-    color: "#757575",
+    color: "#424242",
     marginBottom: 8,
   },
   linkRow: {

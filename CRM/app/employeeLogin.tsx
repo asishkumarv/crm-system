@@ -81,8 +81,11 @@ export default function EmployeeLogin() {
                     activeUnderlineColor="#00796B"
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     left={<TextInput.Icon icon="account-circle-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <TextInput
@@ -92,8 +95,11 @@ export default function EmployeeLogin() {
                     mode="flat"
                     activeUnderlineColor="#00796B"
                     secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
                     left={<TextInput.Icon icon="shield-key-outline" />}
                     style={styles.input}
+                    textColor="#000"
                   />
 
                   <Button 

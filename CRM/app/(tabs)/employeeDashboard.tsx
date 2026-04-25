@@ -256,39 +256,50 @@ export default function EmployeeDashboard() {
       </ScrollView>
 
       <Portal>
-        <Dialog visible={interactionVisible} onDismiss={() => !submitting && setInteractionVisible(false)} style={styles.dialog}>
-          <Dialog.Title style={styles.dialogTitle}>Log Interaction</Dialog.Title>
+        <Dialog 
+          visible={interactionVisible} 
+          onDismiss={() => !submitting && setInteractionVisible(false)} 
+          style={[styles.dialog, styles.interactionDialog]}
+        >
+          <View style={styles.dialogHeader}>
+            <IconButton icon="message-draw" iconColor="#1E293B" size={24} />
+            <Dialog.Title style={styles.dialogTitle}>Activity Journal</Dialog.Title>
+          </View>
           <Dialog.Content>
             <Text variant="bodyMedium" style={styles.dialogSubtitle}>
-              Please provide details about your interaction with <Text style={{fontWeight:'bold'}}>{activeLead?.name}</Text>.
+              Documenting progress for: <Text style={{fontWeight:'800', color: '#1A237E'}}>{activeLead?.name}</Text>
             </Text>
             <TextInput
-              label="Interaction Note"
-              placeholder="e.g. Discussed pricing, scheduled follow-up"
+              label="Interaction Evidence"
+              placeholder="Provide a brief summary of the conversation..."
               value={note}
               onChangeText={setNote}
               mode="outlined"
               multiline
               numberOfLines={4}
               style={styles.dialogInput}
-              outlineColor="#0F172A"
-              activeOutlineColor="#0F172A"
+              outlineColor="#E2E8F0"
+              activeOutlineColor="#1A237E"
+              textColor="#000"
             />
-            {note.length > 0 && note.length < 5 && (
-              <Text style={{color: '#D32F2F', fontSize: 10, marginTop: 4}}>Note must be at least 5 characters long.</Text>
-            )}
+            <View style={styles.inputFooter}>
+               <Text style={[styles.charCount, note.length < 5 && {color: '#D32F2F'}]}>
+                 {note.length} / 5 characters minimum
+               </Text>
+            </View>
           </Dialog.Content>
           <Dialog.Actions style={styles.dialogActions}>
-            <Button onPress={() => setInteractionVisible(false)} disabled={submitting}>Cancel</Button>
+            <Button onPress={() => setInteractionVisible(false)} disabled={submitting} mode="outlined" style={styles.dialogBtn}>Discard</Button>
             <Button 
               mode="contained" 
               onPress={handleLogInteraction} 
               loading={submitting}
               disabled={submitting || note.length < 5}
-              buttonColor="#0F172A"
+              buttonColor="#1A237E"
               textColor="white"
+              style={[styles.dialogBtn, {flex: 2}]}
             >
-              Update Status
+              Verify & Update
             </Button>
           </Dialog.Actions>
         </Dialog>
@@ -507,22 +518,44 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: '#fff',
   },
+  interactionDialog: {
+    maxWidth: 500,
+    alignSelf: 'center',
+    width: '95%',
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
   dialogTitle: {
-    textAlign: 'center',
     fontWeight: '800',
     color: '#0F172A',
+    marginLeft: -8,
   },
   dialogSubtitle: {
     color: '#64748B',
     marginBottom: 16,
-    textAlign: 'center',
   },
   dialogInput: {
     backgroundColor: '#fff',
-    marginTop: 8,
+  },
+  inputFooter: {
+    marginTop: 4,
+    alignItems: 'flex-end',
+  },
+  charCount: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
   },
   dialogActions: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 20,
+    gap: 8,
+  },
+  dialogBtn: {
+    borderRadius: 12,
   }
 });

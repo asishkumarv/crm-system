@@ -102,8 +102,15 @@ exports.getEmployeeDetails = async (req, res) => {
     const leads = await db.query(`
       SELECT 
         l.id, l.name, l.phone, l.email, l.query, l.source, l.status, l.updated_at,
-        (SELECT note FROM interactions WHERE lead_id = l.id ORDER BY created_at DESC LIMIT 1) as last_note
+        i.note as last_note
       FROM leads l 
+      LEFT JOIN LATERAL (
+        SELECT note 
+        FROM interactions 
+        WHERE lead_id = l.id 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      ) i ON true
       WHERE l.assigned_to = $1::integer
       ORDER BY l.updated_at DESC
     `, [parseInt(id)]);
