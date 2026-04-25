@@ -33,9 +33,11 @@ export default function EmployeeDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const userId = localStorage.getItem("userId");
 
   const fetchData = async () => {
+    const userId = user?.id || user?.userId;
+    if (!userId) return;
+    
     try {
       const res = await API.get(`/employee/my-leads/${userId}`);
       setLeads(res.data);

@@ -46,10 +46,20 @@ exports.approveEmployee = async (req, res) => {
 };
 
 exports.getMyLeads = async (req, res) => {
-  const leads = await db.query(
-    "SELECT * FROM leads WHERE assigned_to=$1",
-    [req.params.id]
-  );
+  const { id } = req.params;
+  
+  if (!id || id === "undefined") {
+    return res.status(400).send("Valid employee ID is required");
+  }
 
-  res.json(leads.rows);
+  try {
+    const leads = await db.query(
+      "SELECT * FROM leads WHERE assigned_to=$1 ORDER BY created_at DESC",
+      [id]
+    );
+    res.json(leads.rows);
+  } catch (err) {
+    console.error("Error fetching leads:", err);
+    res.status(500).send("Error fetching leads");
+  }
 };
