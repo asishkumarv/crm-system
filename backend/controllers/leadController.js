@@ -117,8 +117,8 @@ exports.logInteraction = async (req, res) => {
 
     // 2. Log Interaction
     await db.query(
-      "INSERT INTO interactions(lead_id, employee_id, note, type) VALUES($1::integer, $2::integer, $3, $4)",
-      [parseInt(id), parseInt(employeeId), note, status]
+      "INSERT INTO interactions(lead_id, employee_id, type,note) VALUES($1::integer, $2::integer, $3, $4)",
+      [parseInt(id), parseInt(employeeId),status, note]
     );
 
     res.send("Interaction logged and status updated");

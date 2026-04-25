@@ -53,6 +53,25 @@ const initDB = async () => {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    
+    // Fix: Ensure 'id' is SERIAL/Auto-increment if it was created manually as just 'integer'
+    try {
+      await db.query(`
+        DO $$ 
+        BEGIN 
+          IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'interactions_id_seq') THEN
+            CREATE SEQUENCE interactions_id_seq;
+            ALTER TABLE interactions ALTER COLUMN id SET DEFAULT nextval('interactions_id_seq');
+            ALTER SEQUENCE interactions_id_seq OWNED BY interactions.id;
+            PERFORM setval('interactions_id_seq', COALESCE((SELECT MAX(id)+1 FROM interactions), 1), false);
+          END IF;
+        END $$;
+      `);
+    } catch (e) { console.log("Sequence check skipped"); }
+
+    // Ensure the column name matches user's expectation (status vs type)
+    await db.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS status VARCHAR(50)");
+    
     console.log("Database tables verified/created");
   } catch (err) {
     console.error("DB Initialization Error:", err);
