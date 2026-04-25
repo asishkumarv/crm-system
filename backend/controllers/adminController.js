@@ -95,19 +95,23 @@ exports.getAllEmployees = async (req, res) => {
 
 exports.getEmployeeDetails = async (req, res) => {
   const { id } = req.params;
+  if (!id || id === "undefined") return res.status(400).send("ID is required");
+  
   try {
-    // Get leads assigned to this employee
+    // Get leads assigned to this employee with their latest interaction note
     const leads = await db.query(`
-      SELECT l.*, 
+      SELECT 
+        l.id, l.name, l.phone, l.email, l.query, l.source, l.status, l.updated_at,
         (SELECT note FROM interactions WHERE lead_id = l.id ORDER BY created_at DESC LIMIT 1) as last_note
       FROM leads l 
-      WHERE assigned_to = $1
-      ORDER BY updated_at DESC
-    `, [id]);
+      WHERE l.assigned_to = $1::integer
+      ORDER BY l.updated_at DESC
+    `, [parseInt(id)]);
     
     res.json(leads.rows);
   } catch (err) {
-    res.status(500).send("Error fetching details");
+    console.error("Fetch Details Error:", err);
+    res.status(500).send("Error fetching staff details");
   }
 };
 

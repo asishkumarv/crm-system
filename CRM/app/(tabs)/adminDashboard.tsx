@@ -487,9 +487,10 @@ export default function AdminDashboard() {
                         </Chip>
                       </View>
                       <Text variant="bodySmall" style={styles.detailLeadPhone}>{l.phone} • {l.source}</Text>
+                      <Text variant="bodySmall" style={styles.detailLeadQuery}>Purpose: {l.query || 'N/A'}</Text>
                       {l.last_note && (
                         <Surface style={styles.noteSurface} elevation={0}>
-                          <Text variant="labelSmall" style={styles.noteLabel}>LAST INTERACTION:</Text>
+                          <Text variant="labelSmall" style={styles.noteLabel}>STAFF INTERACTION NOTE:</Text>
                           <Text variant="bodySmall" style={styles.noteText}>"{l.last_note}"</Text>
                         </Surface>
                       )}
@@ -778,6 +779,12 @@ const styles = StyleSheet.create({
   detailLeadPhone: {
     color: '#64748B',
     marginTop: 2,
+  },
+  detailLeadQuery: {
+    color: '#1A237E',
+    fontWeight: '600',
+    marginTop: 4,
+    fontSize: 11,
   },
   noteSurface: {
     backgroundColor: '#F8FAFC',

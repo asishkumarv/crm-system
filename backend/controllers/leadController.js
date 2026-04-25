@@ -111,25 +111,23 @@ exports.logInteraction = async (req, res) => {
   try {
     // 1. Update Lead Status
     await db.query(
-      "UPDATE leads SET status=$1 WHERE id=$2", 
-      [status, id]
+      "UPDATE leads SET status=$1 WHERE id=$2::integer", 
+      [status, parseInt(id)]
     );
 
-    // 2. Log Interaction (Assuming we might have an interactions table or just storing last note)
-    // For now, let's update a 'last_note' column or similar in leads if interactions table isn't ready
-    // But let's try to be robust and add it to a log
+    // 2. Log Interaction
     await db.query(
-      "INSERT INTO interactions(lead_id, employee_id, note, type) VALUES($1, $2, $3, $4)",
-      [id, employeeId, note, status]
+      "INSERT INTO interactions(lead_id, employee_id, note, type) VALUES($1::integer, $2::integer, $3, $4)",
+      [parseInt(id), parseInt(employeeId), note, status]
     );
 
     res.send("Interaction logged and status updated");
   } catch (err) {
-    console.error(err);
-    // If table doesn't exist, fallback to just updating the status for now
+    console.error("Interaction Logging Error:", err);
+    // If table doesn't exist or logging fails, fallback to just updating the status
     try {
-       await db.query("UPDATE leads SET status=$1 WHERE id=$2", [status, id]);
-       res.send("Status updated (Interaction logging failed - system check required)");
+       await db.query("UPDATE leads SET status=$1 WHERE id=$2::integer", [status, parseInt(id)]);
+       res.send("Status updated (Interaction logging failed)");
     } catch (innerErr) {
        res.status(500).send("Error updating lead state");
     }
