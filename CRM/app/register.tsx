@@ -17,10 +17,10 @@ export default function Register() {
   const register = async () => {
     try {
       if (role === "employee") {
-        await API.post("/employee/Register", form);
+        await API.post("/employee/register", form);
         alert("Waiting for admin approval");
       } else {
-        await API.post("/admin/Register", form);
+        await API.post("/admin/register", form);
         alert("OTP sent to email");
         setShowOTP(true);
       }
