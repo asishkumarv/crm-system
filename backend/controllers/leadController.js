@@ -99,3 +99,39 @@ exports.assignLead = async (req, res) => {
     res.status(500).send("Error assigning lead");
   }
 };
+
+exports.logInteraction = async (req, res) => {
+  const { id } = req.params;
+  const { status, note, employeeId } = req.body;
+  
+  if (!note || note.length < 5) {
+    return res.status(400).send("A descriptive note is required to update status.");
+  }
+
+  try {
+    // 1. Update Lead Status
+    await db.query(
+      "UPDATE leads SET status=$1 WHERE id=$2", 
+      [status, id]
+    );
+
+    // 2. Log Interaction (Assuming we might have an interactions table or just storing last note)
+    // For now, let's update a 'last_note' column or similar in leads if interactions table isn't ready
+    // But let's try to be robust and add it to a log
+    await db.query(
+      "INSERT INTO interactions(lead_id, employee_id, note, type) VALUES($1, $2, $3, $4)",
+      [id, employeeId, note, status]
+    );
+
+    res.send("Interaction logged and status updated");
+  } catch (err) {
+    console.error(err);
+    // If table doesn't exist, fallback to just updating the status for now
+    try {
+       await db.query("UPDATE leads SET status=$1 WHERE id=$2", [status, id]);
+       res.send("Status updated (Interaction logging failed - system check required)");
+    } catch (innerErr) {
+       res.status(500).send("Error updating lead state");
+    }
+  }
+};

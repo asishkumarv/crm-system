@@ -13,7 +13,10 @@ import {
   FAB,
   Appbar,
   Button,
-  Chip
+  Chip,
+  TextInput,
+  Portal,
+  Dialog
 } from "react-native-paper";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
@@ -36,6 +39,13 @@ export default function EmployeeDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Interaction Modal States
+  const [interactionVisible, setInteractionVisible] = useState(false);
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<string>("");
+  const [note, setNote] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
     const userId = user?.id || user?.userId;
@@ -73,6 +83,31 @@ export default function EmployeeDashboard() {
 
   const handleCall = (phone: string) => {
     Linking.openURL(`tel:${phone}`);
+  };
+
+  const openInteractionDialog = (lead: Lead, status: string) => {
+    setActiveLead(lead);
+    setPendingStatus(status);
+    setNote("");
+    setInteractionVisible(true);
+  };
+
+  const handleLogInteraction = async () => {
+    if (!activeLead || !note || note.length < 5) return;
+    setSubmitting(true);
+    try {
+      await API.put(`/leads/${activeLead.id}/status`, { 
+        status: pendingStatus,
+        note,
+        employeeId: user?.id || user?.userId
+      });
+      setInteractionVisible(false);
+      fetchData();
+    } catch (err) {
+      alert("Failed to log interaction. Note must be at least 5 characters.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading && !refreshing) {
@@ -148,11 +183,24 @@ export default function EmployeeDashboard() {
                     <View style={styles.leadInfo}>
                       <Text variant="titleMedium" style={styles.leadName}>{l.name}</Text>
                       <Text variant="bodySmall" style={styles.leadPhone}>{l.phone}</Text>
-                      <Text variant="bodySmall" style={styles.leadPhone}>{l.email}</Text>
-                      <Text variant="bodySmall" style={styles.leadPhone}>{'Lead Purpose: '+ l.query}</Text>
-                      <Text variant="bodySmall" style={styles.leadPhone}>{'Lead Source: '+ l.source}</Text>
+                      <Text variant="bodySmall" style={styles.leadEmail}>{l.email}</Text>
+                      <Text variant="bodySmall" style={styles.leadQuery}>{'Purpose: '+ l.query}</Text>
+                      <Text variant="bodySmall" style={styles.leadSource}>{'Source: '+ l.source}</Text>
                     </View>
-                    <Chip style={styles.statusChip} textStyle={styles.statusText}>New</Chip>
+                    <Chip 
+                      style={[
+                        styles.statusChip, 
+                        l.status === 'contacted' && { backgroundColor: '#FEF3C7' },
+                        l.status === 'converted' && { backgroundColor: '#D1FAE5' }
+                      ]} 
+                      textStyle={[
+                        styles.statusText,
+                        l.status === 'contacted' && { color: '#92400E' },
+                        l.status === 'converted' && { color: '#065F46' }
+                      ]}
+                    >
+                      {l.status?.toUpperCase() || 'NEW'}
+                    </Chip>
                   </View>
                   
                   <Divider style={styles.cardDivider} />
@@ -169,13 +217,35 @@ export default function EmployeeDashboard() {
                     </Button>
                     <Button 
                       icon="email-outline" 
-                      mode="contained" 
+                      mode="outlined" 
                       onPress={() => l.email && Linking.openURL(`mailto:${l.email}`)} 
-                      style={[styles.actionBtn, { backgroundColor: '#0F172A' }]}
+                      style={styles.actionBtn}
                       contentStyle={styles.actionBtnContent}
-                      textColor="white"
                     >
                       Email
+                    </Button>
+                  </View>
+
+                  <View style={[styles.actionRow, { marginTop: 12 }]}>
+                    <Button 
+                      icon="account-check-outline" 
+                      mode={l.status === 'contacted' ? "contained" : "contained-tonal"}
+                      onPress={() => openInteractionDialog(l, 'contacted')} 
+                      style={[styles.statusUpdateBtn, { flex: 1 }]}
+                      buttonColor={l.status === 'contacted' ? '#0F172A' : '#F1F5F9'}
+                      textColor={l.status === 'contacted' ? '#FFF' : '#475569'}
+                    >
+                      Contacted
+                    </Button>
+                    <Button 
+                      icon="currency-usd" 
+                      mode={l.status === 'converted' ? "contained" : "contained-tonal"}
+                      onPress={() => openInteractionDialog(l, 'converted')} 
+                      style={[styles.statusUpdateBtn, { flex: 1.2 }]}
+                      buttonColor={l.status === 'converted' ? '#10B981' : '#F1F5F9'}
+                      textColor={l.status === 'converted' ? '#FFF' : '#475569'}
+                    >
+                      Converted
                     </Button>
                   </View>
                 </Surface>
@@ -184,6 +254,45 @@ export default function EmployeeDashboard() {
           )}
         </View>
       </ScrollView>
+
+      <Portal>
+        <Dialog visible={interactionVisible} onDismiss={() => !submitting && setInteractionVisible(false)} style={styles.dialog}>
+          <Dialog.Title style={styles.dialogTitle}>Log Interaction</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium" style={styles.dialogSubtitle}>
+              Please provide details about your interaction with <Text style={{fontWeight:'bold'}}>{activeLead?.name}</Text>.
+            </Text>
+            <TextInput
+              label="Interaction Note"
+              placeholder="e.g. Discussed pricing, scheduled follow-up"
+              value={note}
+              onChangeText={setNote}
+              mode="outlined"
+              multiline
+              numberOfLines={4}
+              style={styles.dialogInput}
+              outlineColor="#0F172A"
+              activeOutlineColor="#0F172A"
+            />
+            {note.length > 0 && note.length < 5 && (
+              <Text style={{color: '#D32F2F', fontSize: 10, marginTop: 4}}>Note must be at least 5 characters long.</Text>
+            )}
+          </Dialog.Content>
+          <Dialog.Actions style={styles.dialogActions}>
+            <Button onPress={() => setInteractionVisible(false)} disabled={submitting}>Cancel</Button>
+            <Button 
+              mode="contained" 
+              onPress={handleLogInteraction} 
+              loading={submitting}
+              disabled={submitting || note.length < 5}
+              buttonColor="#0F172A"
+              textColor="white"
+            >
+              Update Status
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
 
       <FAB
         icon="plus"
@@ -311,6 +420,21 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 2,
   },
+  leadEmail: {
+    color: '#64748B',
+    fontSize: 12,
+  },
+  leadQuery: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  leadSource: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
   statusChip: {
     backgroundColor: '#E0F2FE',
     height: 24,
@@ -334,6 +458,9 @@ const styles = StyleSheet.create({
   },
   actionBtnContent: {
     height: 40,
+  },
+  statusUpdateBtn: {
+    borderRadius: 12,
   },
   emptySurface: {
     padding: 48,
@@ -375,5 +502,27 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontWeight: '600',
     color: '#0F172A',
+  },
+  dialog: {
+    borderRadius: 24,
+    backgroundColor: '#fff',
+  },
+  dialogTitle: {
+    textAlign: 'center',
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  dialogSubtitle: {
+    color: '#64748B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  dialogInput: {
+    backgroundColor: '#fff',
+    marginTop: 8,
+  },
+  dialogActions: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   }
 });

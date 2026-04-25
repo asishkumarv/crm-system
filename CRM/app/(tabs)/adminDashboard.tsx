@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { 
   Text, 
   Card, 
@@ -48,6 +49,8 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Modal States
+  const [viewMode, setViewMode] = useState<'employees' | 'leads'>('employees');
+  const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [bulkEmailVisible, setBulkEmailVisible] = useState(false);
   const [assignVisible, setAssignVisible] = useState(false);
   const [emailContent, setEmailContent] = useState({ subject: "", message: "" });
@@ -85,6 +88,12 @@ export default function AdminDashboard() {
     fetchData();
   }, []);
 
+  const toggleLeadSelection = (id: string) => {
+    setSelectedLeads(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
   const approve = async (id: string) => {
     try {
       await API.put(`/admin/approve/${id}`);
@@ -98,27 +107,38 @@ export default function AdminDashboard() {
     try {
       await API.post("/leads/bulk-email", {
         ...emailContent,
-        leadIds: "all"
+        leadIds: selectedLeads.length > 0 ? selectedLeads : "all"
       });
-      alert("Bulk emails sent successfully");
+      alert("Broadcast successful");
       setBulkEmailVisible(false);
+      setSelectedLeads([]);
     } catch (err) {
-      alert("Failed to send bulk emails");
+      alert("Failed to send broadcast");
     }
   };
 
   const handleAssign = async () => {
-    if (!selectedLead || !selectedEmployee) return;
+    const leadsToAssign = selectedLead ? [selectedLead] : selectedLeads;
+    if (leadsToAssign.length === 0 || !selectedEmployee) return;
+    
     try {
-      await API.post("/leads/assign", {
-        leadId: selectedLead,
-        employeeId: selectedEmployee
-      });
-      alert("Lead assigned successfully");
+      // If we have multiple leads, we might need a bulk endpoint or map over them
+      // Assuming a bulk-assign endpoint exists or we use the single one in a loop
+      await Promise.all(leadsToAssign.map(leadId => 
+        API.post("/leads/assign", {
+          leadId,
+          employeeId: selectedEmployee
+        })
+      ));
+      
+      alert(`Success: ${leadsToAssign.length} leads allocated`);
       setAssignVisible(false);
+      setSelectedLead(null);
+      setSelectedLeads([]);
+      setSelectedEmployee(null);
       fetchData();
     } catch (err) {
-      alert("Failed to assign lead");
+      alert("Allocation process encountered an error");
     }
   };
 
@@ -162,7 +182,19 @@ export default function AdminDashboard() {
           
           {/* Dashboard Hero / Stats Summary */}
           <View style={styles.heroSection}>
-            <Text variant="headlineMedium" style={styles.heroTitle}>Overview</Text>
+            <View style={styles.heroHeader}>
+              <Text variant="headlineMedium" style={styles.heroTitle}>Overview</Text>
+              <SegmentedButtons
+                value={viewMode}
+                onValueChange={v => setViewMode(v as any)}
+                style={styles.viewSwitcher}
+                buttons={[
+                  { value: 'employees', label: 'Staff', icon: 'account-group' },
+                  { value: 'leads', label: 'Leads', icon: 'target' },
+                ]}
+              />
+            </View>
+            
             <View style={styles.gridRow}>
               <Surface style={[styles.statCard, { borderLeftColor: '#1A237E' }]} elevation={1}>
                 <IconButton icon="account-tie" iconColor="#1A237E" size={24} style={styles.statIcon} />
@@ -192,7 +224,20 @@ export default function AdminDashboard() {
 
           {/* Core Tools Section */}
           <Surface style={styles.toolsSurface} elevation={2}>
-            <Text variant="titleLarge" style={styles.sectionHeading}>Business Intelligence Tools</Text>
+            <View style={styles.toolsHeader}>
+              <Text variant="titleLarge" style={styles.sectionHeading}>Business Intelligence Tools</Text>
+              {selectedLeads.length > 0 && (
+                <Button 
+                  mode="contained" 
+                  icon="account-multiple-plus" 
+                  buttonColor="#FF8F00"
+                  onPress={() => setAssignVisible(true)}
+                  style={styles.bulkAssignBtn}
+                >
+                  Assign {selectedLeads.length} Selected
+                </Button>
+              )}
+            </View>
             <View style={styles.toolsGrid}>
               {Platform.OS === 'web' && (
                 <Button 
@@ -216,7 +261,7 @@ export default function AdminDashboard() {
                 contentStyle={styles.toolBtnContent}
                 textColor="white"
               >
-                Bulk Email
+                {selectedLeads.length > 0 ? 'Email Selected' : 'Broadcast Email'}
               </Button>
               
               <Button 
@@ -235,64 +280,87 @@ export default function AdminDashboard() {
 
           {/* Lists Section */}
           <View style={styles.listsContainer}>
-            {/* Employee Management */}
-            <View style={styles.listSection}>
-              <View style={styles.listHeader}>
-                <Text variant="titleMedium" style={styles.listTitle}>Staff Management</Text>
-                <Chip icon="check-circle" style={styles.countChip}>{employees.length}</Chip>
+            {viewMode === 'employees' ? (
+              /* Employee Management */
+              <View style={styles.listSection}>
+                <View style={styles.listHeader}>
+                  <Text variant="titleMedium" style={styles.listTitle}>Staff Management</Text>
+                  <Chip icon="check-circle" style={styles.countChip}>{employees.length}</Chip>
+                </View>
+                <View style={styles.itemGrid}>
+                  {employees.map((e) => (
+                    <Card key={e.id} style={styles.modernCard} mode="elevated">
+                      <Card.Content style={styles.modernCardContent}>
+                        <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
+                        <View style={styles.cardInfo}>
+                          <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
+                          <Text variant="bodySmall" style={styles.userEmail}>{e.email}</Text>
+                        </View>
+                        <View style={styles.cardAction}>
+                          {e.status === "pending" ? (
+                            <Button mode="contained" onPress={() => approve(e.id)} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
+                          ) : (
+                            <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
+                          )}
+                        </View>
+                      </Card.Content>
+                    </Card>
+                  ))}
+                </View>
               </View>
-              {employees.map((e) => (
-                <Card key={e.id} style={styles.modernCard} mode="elevated">
-                  <Card.Content style={styles.modernCardContent}>
-                    <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
-                    <View style={styles.cardInfo}>
-                      <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
-                      <Text variant="bodySmall" style={styles.userEmail}>{e.email}</Text>
-                    </View>
-                    <View style={styles.cardAction}>
-                      {e.status === "pending" ? (
-                        <Button mode="contained" onPress={() => approve(e.id)} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
-                      ) : (
-                        <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
-                      )}
-                    </View>
-                  </Card.Content>
-                </Card>
-              ))}
-            </View>
-
-            {/* Lead Queue */}
-            <View style={styles.listSection}>
-              <View style={styles.listHeader}>
-                <Text variant="titleMedium" style={styles.listTitle}>Lead Allocation Queue</Text>
-                <Chip icon="trending-up" style={styles.countChip}>{leads.length}</Chip>
-              </View>
-              {leads.map((l) => (
-                <Surface key={l.id} style={styles.leadSurface} elevation={1}>
-                  <View style={styles.leadMain}>
-                    <View style={styles.leadMeta}>
-                      <Text variant="titleMedium" style={styles.leadName}>{l.name}</Text>
-                      <View style={styles.sourceTag}>
-                        <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} />
-                        <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
-                        <Text variant="labelSmall" style={styles.sourceText}>{'     Lead Purpose: '+l.query}</Text>
+            ) : (
+              /* Lead Queue */
+              <View style={styles.listSection}>
+                <View style={styles.listHeader}>
+                  <View>
+                    <Text variant="titleMedium" style={styles.listTitle}>Lead Allocation Queue</Text>
+                    <Text variant="bodySmall" style={{ color: '#64748B' }}>Select leads for bulk actions</Text>
+                  </View>
+                  <Chip icon="trending-up" style={styles.countChip}>{leads.length}</Chip>
+                </View>
+                <View style={styles.itemGrid}>
+                  {leads.map((l) => (
+                    <Surface 
+                      key={l.id} 
+                      style={[
+                        styles.leadSurface, 
+                        selectedLeads.includes(l.id) && styles.selectedLeadSurface
+                      ]} 
+                      elevation={1}
+                    >
+                      <View style={styles.leadMain}>
+                        <IconButton 
+                          icon={selectedLeads.includes(l.id) ? "checkbox-marked" : "checkbox-blank-outline"} 
+                          iconColor={selectedLeads.includes(l.id) ? "#1A237E" : "#94A3B8"}
+                          onPress={() => toggleLeadSelection(l.id)}
+                        />
+                        <View style={styles.leadMeta}>
+                          <Text variant="titleMedium" style={styles.leadName}>{l.name}</Text>
+                          <View style={styles.sourceTag}>
+                            <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} />
+                            <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
+                            <Text variant="labelSmall" style={styles.sourceText}>{'     Purpose: '+l.query}</Text>
+                          </View>
+                        </View>
+                        {!selectedLeads.includes(l.id) && (
+                          <IconButton 
+                            icon="account-plus-outline" 
+                            mode="contained-tonal" 
+                            onPress={() => { setSelectedLead(l.id); setAssignVisible(true); }}
+                          />
+                        )}
                       </View>
-                    </View>
-                    <IconButton 
-                      icon="account-plus-outline" 
-                      mode="contained-tonal" 
-                      onPress={() => { setSelectedLead(l.id); setAssignVisible(true); }}
-                    />
-                  </View>
-                  <Divider style={{ marginVertical: 8 }} />
-                  <View style={styles.leadFooter}>
-                    <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
-                    <Text variant="labelSmall" style={styles.phoneText}>{l.email}</Text>
-                    <Chip style={styles.assignChip}>{l.assigned_to ? 'Assigned' : 'Unallocated'}</Chip>
-                  </View>
-                </Surface>
-              ))}
-            </View>
+                      <Divider style={{ marginVertical: 8 }} />
+                      <View style={styles.leadFooter}>
+                        <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
+                        <Text variant="labelSmall" style={styles.phoneText}>{l.email}</Text>
+                        <Chip style={styles.assignChip}>{l.assigned_to ? 'Assigned' : 'Unallocated'}</Chip>
+                      </View>
+                    </Surface>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
         </View>
         <View style={{ height: 40 }} />
@@ -312,25 +380,51 @@ export default function AdminDashboard() {
           </Dialog>
 
           <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)} style={styles.dialog}>
-            <Dialog.Title style={styles.dialogTitle}>Allocate Lead</Dialog.Title>
+            <Dialog.Title style={styles.dialogTitle}>
+              {selectedLead ? 'Allocate Lead' : `Bulk Allocate (${selectedLeads.length} Leads)`}
+            </Dialog.Title>
             <Dialog.Content>
-              <ScrollView style={{ maxHeight: 300 }}>
-                {employees.filter(e => e.status === 'approved').map(emp => (
-                  <List.Item
-                    key={emp.id}
-                    title={emp.name}
-                    description={emp.email}
-                    onPress={() => setSelectedEmployee(emp.id)}
-                    left={p => <Avatar.Text {...p} size={36} label={emp.name[0]} />}
-                    right={p => <IconButton icon={selectedEmployee === emp.id ? "check-circle" : "circle-outline"} iconColor={selectedEmployee === emp.id ? "#1A237E" : "#ccc"} />}
-                    style={[styles.listItem, selectedEmployee === emp.id && styles.selectedListItem]}
-                  />
-                ))}
+              <Text variant="bodySmall" style={styles.dialogSubtitle}>Choose an approved employee to handle these assignments</Text>
+              <ScrollView style={{ maxHeight: 400 }}>
+                <View style={styles.employeeSelectionList}>
+                  {employees.filter(e => e.status === 'approved').map(emp => (
+                    <TouchableOpacity 
+                      key={emp.id} 
+                      onPress={() => setSelectedEmployee(emp.id)}
+                      style={[
+                        styles.empPickItem, 
+                        selectedEmployee === emp.id && styles.empPickItemSelected
+                      ]}
+                    >
+                      <Avatar.Text size={40} label={emp.name[0]} style={styles.empAvatar} />
+                      <View style={styles.empInfo}>
+                        <Text variant="titleMedium" style={styles.empName}>{emp.name}</Text>
+                        <Text variant="bodySmall" style={styles.empEmail}>{emp.email}</Text>
+                      </View>
+                      <IconButton 
+                        icon={selectedEmployee === emp.id ? "check-circle" : "circle-outline"} 
+                        iconColor={selectedEmployee === emp.id ? "#1A237E" : "#E2E8F0"} 
+                      />
+                    </TouchableOpacity>
+                  ))}
+                  {employees.filter(e => e.status === 'approved').length === 0 && (
+                    <Text style={styles.emptyMsg}>No approved employees found.</Text>
+                  )}
+                </View>
               </ScrollView>
             </Dialog.Content>
-            <Dialog.Actions>
-              <Button onPress={() => setAssignVisible(false)}>Cancel</Button>
-              <Button mode="contained" disabled={!selectedEmployee} onPress={handleAssign} buttonColor="#1A237E" textColor="white">Confirm Allocation</Button>
+            <Dialog.Actions style={styles.dialogActions}>
+              <Button onPress={() => setAssignVisible(false)} mode="outlined" style={styles.dialogBtn}>Cancel</Button>
+              <Button 
+                mode="contained" 
+                disabled={!selectedEmployee} 
+                onPress={handleAssign} 
+                buttonColor="#1A237E" 
+                textColor="white"
+                style={styles.dialogBtn}
+              >
+                Confirm Allocation
+              </Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
@@ -370,10 +464,20 @@ const styles = StyleSheet.create({
   heroSection: {
     marginBottom: 32,
   },
+  heroHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   heroTitle: {
     fontWeight: '800',
     color: '#1E293B',
-    marginBottom: 20,
+  },
+  viewSwitcher: {
+    minWidth: 240,
   },
   gridRow: {
     flexDirection: 'row',
@@ -412,10 +516,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  toolsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
   sectionHeading: {
     fontWeight: '800',
     color: '#1E293B',
-    marginBottom: 20,
+  },
+  bulkAssignBtn: {
+    borderRadius: 12,
   },
   toolsGrid: {
     flexDirection: 'row',
@@ -431,8 +545,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   listsContainer: {
-    flexDirection: Platform.OS === 'web' && Dimensions.get('window').width > 900 ? 'row' : 'column',
-    gap: 24,
+    flex: 1,
   },
   listSection: {
     flex: 1,
@@ -451,14 +564,21 @@ const styles = StyleSheet.create({
   countChip: {
     backgroundColor: '#F1F5F9',
   },
+  itemGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
   modernCard: {
-    marginBottom: 12,
-    borderRadius: 16,
+    flex: 1,
+    minWidth: 320,
+    borderRadius: 20,
     backgroundColor: '#fff',
   },
   modernCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 12,
   },
   avatar: {
     backgroundColor: '#E2E8F0',
@@ -481,20 +601,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   leadSurface: {
-    padding: 16,
-    borderRadius: 16,
+    flex: 1,
+    minWidth: 320,
+    padding: 20,
+    borderRadius: 20,
     backgroundColor: '#fff',
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
+  selectedLeadSurface: {
+    borderColor: '#1A237E',
+    backgroundColor: '#F8FAFF',
+    borderWidth: 2,
+  },
   leadMain: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   leadMeta: {
     flex: 1,
+    marginLeft: 8,
   },
   leadName: {
     fontWeight: '700',
@@ -504,6 +630,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    flexWrap: 'wrap',
   },
   sourceText: {
     color: '#64748B',
@@ -520,7 +647,7 @@ const styles = StyleSheet.create({
   },
   assignChip: {
     height: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
   loadingContainer: {
     flex: 1,
@@ -534,23 +661,67 @@ const styles = StyleSheet.create({
     color: '#1A237E',
   },
   dialog: {
-    borderRadius: 24,
+    borderRadius: 32,
     backgroundColor: '#fff',
+    paddingBottom: 8,
   },
   dialogTitle: {
     textAlign: 'center',
-    fontWeight: '800',
+    fontWeight: '900',
+    fontSize: 24,
+    color: '#0F172A',
+  },
+  dialogSubtitle: {
+    textAlign: 'center',
+    color: '#64748B',
+    marginBottom: 20,
   },
   dialogInput: {
     marginBottom: 12,
     backgroundColor: '#fff',
   },
-  listItem: {
-    borderRadius: 12,
-    marginBottom: 4,
+  employeeSelectionList: {
+    gap: 8,
   },
-  selectedListItem: {
-    backgroundColor: '#F1F5F9',
+  empPickItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  empPickItemSelected: {
+    borderColor: '#1A237E',
+    backgroundColor: '#F0F4FF',
+  },
+  empAvatar: {
+    backgroundColor: '#E2E8F0',
+  },
+  empInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  empName: {
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  empEmail: {
+    color: '#64748B',
+  },
+  emptyMsg: {
+    textAlign: 'center',
+    color: '#94A3B8',
+    padding: 20,
+  },
+  dialogActions: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    gap: 12,
+  },
+  dialogBtn: {
+    flex: 1,
+    borderRadius: 12,
   },
   actionButton: {
     borderRadius: 8,

@@ -4,7 +4,8 @@ const {
   getLeads, 
   uploadLeadsCSV, 
   sendBulkEmail,
-  assignLead 
+  assignLead,
+  logInteraction 
 } = require("../controllers/leadController");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -14,5 +15,6 @@ router.get("/", getLeads);
 router.post("/upload", upload.single("file"), uploadLeadsCSV);
 router.post("/bulk-email", sendBulkEmail);
 router.post("/assign", assignLead);
+router.put("/:id/status", logInteraction);
 
 module.exports = router;
