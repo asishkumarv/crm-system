@@ -64,6 +64,28 @@ export default function AdminDashboard() {
   const [activeEmployeeData, setActiveEmployeeData] = useState<Lead[]>([]);
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
 
+  // Filter States
+  const [leadFilters, setLeadFilters] = useState({
+    name: "",
+    source: "",
+    phone: "",
+    date: "",
+    assignment: "all" // all, assigned, unallocated
+  });
+
+  const filteredLeads = leads.filter(l => {
+    const matchName = l.name.toLowerCase().includes(leadFilters.name.toLowerCase());
+    const matchSource = (l.source || "").toLowerCase().includes(leadFilters.source.toLowerCase());
+    const matchPhone = (l.phone || "").includes(leadFilters.phone);
+    const matchDate = leadFilters.date ? (l as any).created_at?.includes(leadFilters.date) : true;
+    
+    let matchAssignment = true;
+    if (leadFilters.assignment === 'assigned') matchAssignment = !!l.assigned_to;
+    if (leadFilters.assignment === 'unallocated') matchAssignment = !l.assigned_to;
+
+    return matchName && matchSource && matchPhone && matchDate && matchAssignment;
+  });
+
   const fetchData = async () => {
     try {
       const [empRes, leadRes] = await Promise.all([
@@ -187,7 +209,7 @@ export default function AdminDashboard() {
   return (
     <View style={styles.outerContainer}>
       <Appbar.Header style={styles.appbar} elevated>
-        <Appbar.Content title="Command Center" titleStyle={styles.appbarTitle} />
+        <Appbar.Content title="Admin Dashboard" titleStyle={styles.appbarTitle} />
         <Appbar.Action icon="logout" onPress={logout} color="#1A237E" />
       </Appbar.Header>
 
@@ -237,6 +259,24 @@ export default function AdminDashboard() {
                     {employees.reduce((acc, curr) => acc + (Number(curr.converted_count) || 0), 0)}
                   </Text>
                   <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONVERTED</Text>
+                </View>
+              </Surface>
+              <Surface style={[styles.statCard, { borderLeftColor: '#7C3AED' }]} elevation={1}>
+                <IconButton icon="database-outline" iconColor="#7C3AED" size={24} style={styles.statIcon} />
+                <View>
+                  <Text variant="displaySmall" style={[styles.statValue, { color: '#7C3AED' }]}>
+                    {leads.length}
+                  </Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
+                </View>
+              </Surface>
+              <Surface style={[styles.statCard, { borderLeftColor: '#EF4444' }]} elevation={1}>
+                <IconButton icon="alert-circle-outline" iconColor="#EF4444" size={24} style={styles.statIcon} />
+                <View>
+                  <Text variant="displaySmall" style={[styles.statValue, { color: '#EF4444' }]}>
+                    {leads.filter(l => !l.assigned_to).length}
+                  </Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>UNALLOCATED</Text>
                 </View>
               </Surface>
             </View>
@@ -339,12 +379,73 @@ export default function AdminDashboard() {
                 <View style={styles.listHeader}>
                   <View>
                     <Text variant="titleMedium" style={styles.listTitle}>Lead Allocation Queue</Text>
-                    <Text variant="bodySmall" style={{ color: '#64748B' }}>Select leads for bulk actions</Text>
+                    <Text variant="bodySmall" style={{ color: '#64748B' }}>Search and filter leads below</Text>
                   </View>
-                  <Chip icon="trending-up" style={styles.countChip}>{leads.length}</Chip>
+                  <Chip icon="trending-up" style={styles.countChip}>{filteredLeads.length}</Chip>
                 </View>
+
+                {/* Filter Bar */}
+                <Surface style={styles.filterBar} elevation={1}>
+                  <TextInput 
+                    placeholder="Name" 
+                    value={leadFilters.name} 
+                    onChangeText={t => setLeadFilters({...leadFilters, name: t})}
+                    mode="outlined" 
+                    style={styles.filterInput} 
+                    dense
+                    left={<TextInput.Icon icon="magnify" />}
+                  />
+                  <TextInput 
+                    placeholder="Source" 
+                    value={leadFilters.source} 
+                    onChangeText={t => setLeadFilters({...leadFilters, source: t})}
+                    mode="outlined" 
+                    style={styles.filterInput} 
+                    dense
+                  />
+                  <TextInput 
+                    placeholder="Phone" 
+                    value={leadFilters.phone} 
+                    onChangeText={t => setLeadFilters({...leadFilters, phone: t})}
+                    mode="outlined" 
+                    style={styles.filterInput} 
+                    dense
+                  />
+                  <TextInput 
+                    placeholder="YYYY-MM-DD" 
+                    value={leadFilters.date} 
+                    onChangeText={t => setLeadFilters({...leadFilters, date: t})}
+                    mode="outlined" 
+                    style={styles.filterInput} 
+                    dense
+                    left={<TextInput.Icon icon="calendar" />}
+                  />
+                </Surface>
+                <View style={styles.assignmentFilterRow}>
+                  <SegmentedButtons
+                    value={leadFilters.assignment}
+                    onValueChange={v => setLeadFilters({...leadFilters, assignment: v})}
+                    style={styles.assignmentSegment}
+                    buttons={[
+                      { value: 'all', label: 'All Leads' },
+                      { value: 'assigned', label: 'Assigned' },
+                      { value: 'unallocated', label: 'Unallocated' },
+                    ]}
+                  />
+                  {(leadFilters.name || leadFilters.source || leadFilters.phone || leadFilters.date || leadFilters.assignment !== 'all') && (
+                    <Button 
+                      mode="text" 
+                      onPress={() => setLeadFilters({name:"", source:"", phone:"", date:"", assignment: 'all'})}
+                      textColor="#D32F2F"
+                      icon="filter-variant-remove"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </View>
+
                 <View style={styles.itemGrid}>
-                  {leads.map((l) => (
+                  {filteredLeads.map((l) => (
                     <Surface 
                       key={l.id} 
                       style={[
@@ -884,6 +985,36 @@ const styles = StyleSheet.create({
   dialogBtn: {
     flex: 1,
     borderRadius: 12,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    gap: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterInput: {
+    flex: 1,
+    minWidth: 140,
+    height: 40,
+    backgroundColor: '#fff',
+  },
+  assignmentFilterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  assignmentSegment: {
+    maxWidth: 400,
+    minWidth: 300,
   },
   actionButton: {
     borderRadius: 8,
