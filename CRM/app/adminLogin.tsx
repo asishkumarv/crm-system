@@ -1,23 +1,238 @@
-import { useState } from "react";
-import { View, TextInput, Button, Text } from "react-native";
+import React, { useState } from "react";
+import { 
+  View, 
+  StyleSheet, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ImageBackground, 
+  Image,
+  Dimensions,
+  TouchableOpacity
+} from "react-native";
+import { 
+  TextInput, 
+  Button, 
+  Text, 
+  Card, 
+  useTheme,
+  Portal,
+  Dialog
+} from "react-native-paper";
+import { router } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
-export default function AdminLogin({ navigation }: { navigation: any }) {
+const { width, height } = Dimensions.get("window");
+
+export default function AdminLogin() {
+  const { login: setAuth } = useAuth();
+  const theme = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [visible, setVisible] = useState(false);
 
   const login = async () => {
-    const res = await API.post("/admin/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    navigation.navigate("AdminDashboard");
+    if (!email || !password) return;
+    setLoading(true);
+    try {
+      const res = await API.post("/admin/login", { email, password });
+      setAuth({ email, role: 'admin' }, res.data.token);
+      router.push("/(tabs)/adminDashboard");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Authentication failed. Please check your admin credentials.");
+      setVisible(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={{ padding: 20 }}>
-      <Text>Admin Login</Text>
-      <TextInput placeholder="Email" onChangeText={setEmail} />
-      <TextInput placeholder="Password" secureTextEntry onChangeText={setPassword} />
-      <Button title="Login" onPress={login} />
+    <View style={styles.outerContainer}>
+      <ImageBackground 
+        source={require("../assets/images/auth_bg.png")}
+        style={styles.background}
+        resizeMode="cover"
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.flex}
+        >
+          <View style={styles.scrollContent}>
+            <View style={styles.glassWrapper}>
+              <View style={styles.logoSection}>
+                <Text variant="headlineSmall" style={styles.brandName}>CRM</Text>
+                {/* <Text variant="bodyMedium" style={styles.brandTagline}>Administrator Control Center</Text> */}
+              </View>
+
+              <Card style={styles.card} mode="elevated">
+                <Card.Content style={styles.cardContent}>
+                  <Text variant="titleMedium" style={styles.sectionTitle}>System Authentication</Text>
+
+                  <TextInput
+                    label="Admin Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    mode="flat"
+                    activeUnderlineColor="#1565C0"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    left={<TextInput.Icon icon="shield-account-outline" />}
+                    style={styles.input}
+                  />
+
+                  <TextInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    mode="flat"
+                    activeUnderlineColor="#1565C0"
+                    secureTextEntry
+                    left={<TextInput.Icon icon="key-outline" />}
+                    style={styles.input}
+                  />
+
+                  <Button 
+                    mode="contained" 
+                    onPress={login} 
+                    loading={loading}
+                    disabled={loading}
+                    style={styles.mainButton}
+                    labelStyle={styles.buttonLabel}
+                    buttonColor="#1A237E"
+                    textColor="white"
+                  >
+                    Login
+                  </Button>
+
+                  <View style={styles.footer}>
+                    <TouchableOpacity onPress={() => router.push("/register")}>
+                      <Text style={styles.link}>New admin? Register here.</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Card.Content>
+              </Card>
+            </View>
+
+            <Portal>
+              <Dialog visible={visible} onDismiss={() => setVisible(false)} style={styles.dialog}>
+                <Dialog.Title style={styles.errorTitle}>Security Notice</Dialog.Title>
+                <Dialog.Content>
+                  <Text variant="bodyMedium" style={styles.errorMsg}>{error}</Text>
+                </Dialog.Content>
+                <Dialog.Actions>
+                  <Button onPress={() => setVisible(false)} textColor="#1565C0">RETRY</Button>
+                </Dialog.Actions>
+              </Dialog>
+            </Portal>
+          </View>
+        </KeyboardAvoidingView>
+      </ImageBackground>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  outerContainer: {
+    flex: 1,
+  },
+  background: {
+    width: width,
+    height: height,
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+  glassWrapper: {
+    width: '100%',
+    maxWidth: 450,
+    alignSelf: 'center',
+  },
+  logoSection: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  brandName: {
+    color: "#fff",
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  brandTagline: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+    letterSpacing: 1.5,
+    marginTop: 4,
+  },
+    card: {
+    borderRadius: 24,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    ...Platform.select({
+      web: {
+        boxShadow: "0px 10px 20px rgba(0,0,0,0.2)",
+      },
+      default: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 10,
+      }
+    })
+  },
+  cardContent: {
+    padding: 16,
+  },
+  sectionTitle: {
+    textAlign: "center",
+    color: "#1A237E",
+    fontWeight: "700",
+    marginBottom: 24,
+  },
+  input: {
+    marginBottom: 20,
+    backgroundColor: "transparent",
+  },
+  mainButton: {
+    marginTop: 12,
+    borderRadius: 12,
+    paddingVertical: 4,
+  },
+  buttonLabel: {
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  footer: {
+    alignItems: "center",
+    marginTop: 24,
+  },
+  link: {
+    color: "#1565C0",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  dialog: {
+    borderRadius: 20,
+    backgroundColor: '#fff',
+  },
+  errorTitle: {
+    color: '#D32F2F',
+    fontWeight: 'bold',
+  },
+  errorMsg: {
+    color: '#444',
+  }
+});
