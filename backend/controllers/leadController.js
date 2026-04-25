@@ -2,21 +2,100 @@ const db = require("../db");
 const multer = require("multer");
 const csv = require("csv-parser");
 const fs = require("fs");
+const nodemailer = require("nodemailer");
 
-const upload = multer({ dest: "uploads/" });
+// EMAIL CONFIG for bulk emails
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 exports.createLead = async (req, res) => {
   const { name, phone, email, source } = req.body;
-
-  await db.query(
-    "INSERT INTO leads(name,phone,email,source) VALUES($1,$2,$3,$4)",
-    [name, phone, email, source]
-  );
-
-  res.send("Lead added");
+  try {
+    await db.query(
+      "INSERT INTO leads(name,phone,email,source) VALUES($1,$2,$3,$4)",
+      [name, phone, email, source]
+    );
+    res.send("Lead added successfully");
+  } catch (err) {
+    res.status(500).send("Error adding lead");
+  }
 };
 
 exports.getLeads = async (req, res) => {
-  const leads = await db.query("SELECT * FROM leads");
-  res.json(leads.rows);
+  try {
+    const leads = await db.query("SELECT * FROM leads ORDER BY created_at DESC");
+    res.json(leads.rows);
+  } catch (err) {
+    res.status(500).send("Error fetching leads");
+  }
+};
+
+exports.uploadLeadsCSV = async (req, res) => {
+  if (!req.file) return res.status(400).send("No file uploaded");
+
+  const results = [];
+  fs.createReadStream(req.file.path)
+    .pipe(csv())
+    .on("data", (data) => results.push(data))
+    .on("end", async () => {
+      try {
+        for (let lead of results) {
+          const { name, phone, email, source } = lead;
+          await db.query(
+            "INSERT INTO leads(name,phone,email,source) VALUES($1,$2,$3,$4)",
+            [name, phone, email, source || 'CSV Upload']
+          );
+        }
+        fs.unlinkSync(req.file.path); // Delete file after processing
+        res.send(`${results.length} leads imported successfully`);
+      } catch (err) {
+        res.status(500).send("Error importing leads");
+      }
+    });
+};
+
+exports.sendBulkEmail = async (req, res) => {
+  const { subject, message, leadIds } = req.body; // leadIds is an array of IDs or "all"
+
+  try {
+    let query = "SELECT email FROM leads WHERE email IS NOT NULL";
+    let params = [];
+    
+    if (leadIds && leadIds !== "all") {
+      query += " AND id = ANY($1)";
+      params.push(leadIds);
+    }
+
+    const result = await db.query(query, params);
+    const emails = result.rows.map(r => r.email);
+
+    if (emails.length === 0) return res.status(400).send("No valid emails found");
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: emails.join(","),
+      subject: subject,
+      text: message,
+    });
+
+    res.send(`Email sent to ${emails.length} leads`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error sending bulk emails");
+  }
+};
+
+exports.assignLead = async (req, res) => {
+  const { leadId, employeeId } = req.body;
+  try {
+    await db.query("UPDATE leads SET assigned_to=$1 WHERE id=$2", [employeeId, leadId]);
+    res.send("Lead assigned successfully");
+  } catch (err) {
+    res.status(500).send("Error assigning lead");
+  }
 };

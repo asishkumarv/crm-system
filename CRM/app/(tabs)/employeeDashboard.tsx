@@ -28,7 +28,7 @@ interface Lead {
 }
 
 export default function EmployeeDashboard() {
-  const { logout, user } = useAuth();
+  const { logout, user, isLoading } = useAuth();
   const theme = useTheme();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +48,14 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!isLoading) {
+      if (!user || user.role !== 'employee') {
+        router.replace("/employeeLogin");
+      } else {
+        fetchData();
+      }
+    }
+  }, [isLoading, user]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

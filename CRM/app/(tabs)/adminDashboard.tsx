@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, Dimensions } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform } from "react-native";
 import { 
   Text, 
   Card, 
@@ -12,8 +12,13 @@ import {
   Divider,
   Surface,
   List,
-  Appbar
+  Appbar,
+  Portal,
+  Dialog,
+  TextInput,
+  SegmentedButtons
 } from "react-native-paper";
+import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import API from "../../services/api";
 
@@ -30,15 +35,23 @@ interface Lead {
   phone: string;
   email?: string;
   source?: string;
+  assigned_to?: string;
 }
 
 export default function AdminDashboard() {
-  const { logout } = useAuth();
+  const { logout, user, isLoading } = useAuth();
   const theme = useTheme();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Modal States
+  const [bulkEmailVisible, setBulkEmailVisible] = useState(false);
+  const [assignVisible, setAssignVisible] = useState(false);
+  const [emailContent, setEmailContent] = useState({ subject: "", message: "" });
+  const [selectedLead, setSelectedLead] = useState<string | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -57,8 +70,14 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!isLoading) {
+      if (!user || user.role !== 'admin') {
+        router.replace("/adminLogin");
+      } else {
+        fetchData();
+      }
+    }
+  }, [isLoading, user]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -68,10 +87,56 @@ export default function AdminDashboard() {
   const approve = async (id: string) => {
     try {
       await API.put(`/admin/approve/${id}`);
-      fetchData(); // Refresh data
+      fetchData();
     } catch (err) {
       alert("Failed to approve employee");
     }
+  };
+
+  const handleBulkEmail = async () => {
+    try {
+      await API.post("/leads/bulk-email", {
+        ...emailContent,
+        leadIds: "all"
+      });
+      alert("Bulk emails sent successfully");
+      setBulkEmailVisible(false);
+    } catch (err) {
+      alert("Failed to send bulk emails");
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!selectedLead || !selectedEmployee) return;
+    try {
+      await API.post("/leads/assign", {
+        leadId: selectedLead,
+        employeeId: selectedEmployee
+      });
+      alert("Lead assigned successfully");
+      setAssignVisible(false);
+      fetchData();
+    } catch (err) {
+      alert("Failed to assign lead");
+    }
+  };
+
+  // Mock File Upload (for web)
+  const handleFileUpload = (event: any) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    API.post("/leads/upload", formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(res => {
+      alert(res.data);
+      fetchData();
+    }).catch(err => {
+      alert("Error uploading CSV");
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -95,7 +160,7 @@ export default function AdminDashboard() {
   return (
     <View style={styles.outerContainer}>
       <Appbar.Header style={styles.appbar}>
-        <Appbar.Content title="Admin" titleStyle={styles.appbarTitle} />
+        <Appbar.Content title="Admin Command Center" titleStyle={styles.appbarTitle} />
         <Appbar.Action icon="logout" onPress={logout} color="#1A237E" />
       </Appbar.Header>
 
@@ -105,10 +170,49 @@ export default function AdminDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.header}>
-          <Text variant="headlineMedium" style={styles.greeting}>Admin Oversight</Text>
-          <Text variant="bodyLarge" style={styles.subtitle}>System Management & Lead Control</Text>
-        </View>
+        {/* Bulk Action Buttons */}
+        <Surface style={styles.actionSurface} elevation={2}>
+          <Text variant="titleMedium" style={styles.actionTitle}>Bulk Operations</Text>
+          <View style={styles.actionRow}>
+            {Platform.OS === 'web' && (
+              <Button 
+                icon="upload" 
+                mode="outlined" 
+                onPress={() => (document.getElementById('csv-upload') as any)?.click()}
+                style={styles.actionBtn}
+              >
+                Import CSV
+              </Button>
+            )}
+            <input 
+              type="file" 
+              id="csv-upload" 
+              style={{ display: 'none' }} 
+              accept=".csv"
+              onChange={handleFileUpload} 
+            />
+            <Button 
+              icon="email-multiple" 
+              mode="contained" 
+              buttonColor="#1565C0"
+              onPress={() => setBulkEmailVisible(true)}
+              style={styles.actionBtn}
+              textColor="white"
+            >
+              Bulk Email
+            </Button>
+            <Button 
+              icon="whatsapp" 
+              mode="contained" 
+              buttonColor="#25D366"
+              onPress={() => alert("Bulk WhatsApp integration ready. Connect your API provider in Settings.")}
+              style={styles.actionBtn}
+              textColor="white"
+            >
+              WhatsApp
+            </Button>
+          </View>
+        </Surface>
 
         <View style={styles.statsRow}>
           <Surface style={[styles.statCard, { borderLeftColor: '#1565C0' }]} elevation={2}>
@@ -123,22 +227,11 @@ export default function AdminDashboard() {
           </Surface>
         </View>
 
-        <View style={styles.statsRow}>
-          <Surface style={[styles.statCard, { borderLeftColor: '#00796B' }]} elevation={2}>
-            <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
-            <Text variant="headlineSmall" style={styles.statValue}>{leads.length}</Text>
-          </Surface>
-          <Surface style={[styles.statCard, { borderLeftColor: '#7B1FA2' }]} elevation={2}>
-            <Text variant="labelMedium" style={styles.statLabel}>SYSTEM HEALTH</Text>
-            <Text variant="headlineSmall" style={[styles.statValue, { color: '#4CAF50' }]}>OPTIMAL</Text>
-          </Surface>
-        </View>
-
         <Divider style={styles.divider} />
 
         <View style={styles.sectionHeader}>
           <IconButton icon="account-group" size={24} iconColor={theme.colors.primary} />
-          <Text variant="titleLarge" style={styles.sectionTitle}>Employee Management</Text>
+          <Text variant="titleLarge" style={styles.sectionTitle}>Employee Control</Text>
         </View>
 
         {employees.map((e) => (
@@ -163,7 +256,6 @@ export default function AdminDashboard() {
                     mode="contained" 
                     onPress={() => approve(e.id)} 
                     style={styles.approveBtn}
-                    labelStyle={{ fontSize: 12 }}
                     buttonColor="#1565C0"
                     textColor="white"
                   >
@@ -177,20 +269,81 @@ export default function AdminDashboard() {
 
         <View style={[styles.sectionHeader, { marginTop: 30 }]}>
           <IconButton icon="bullseye-arrow" size={24} iconColor="#E91E63" />
-          <Text variant="titleLarge" style={styles.sectionTitle}>Global Leads</Text>
+          <Text variant="titleLarge" style={styles.sectionTitle}>Lead Management</Text>
         </View>
 
         {leads.map((l) => (
           <List.Item
             key={l.id}
             title={l.name}
-            description={`${l.phone} • ${l.source || 'Direct Entry'}`}
+            description={`${l.phone} • Source: ${l.source || 'Direct'}\n${l.assigned_to ? 'Assigned' : 'Unassigned'}`}
             left={props => <List.Icon {...props} icon="account-circle" color="#E91E63" />}
-            right={props => <IconButton {...props} icon="chevron-right" />}
+            right={props => (
+              <IconButton 
+                icon="account-arrow-right" 
+                onPress={() => {
+                  setSelectedLead(l.id);
+                  setAssignVisible(true);
+                }} 
+              />
+            )}
             style={styles.listItem}
           />
         ))}
         <View style={{ height: 40 }} />
+
+        {/* Portals */}
+        <Portal>
+          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)}>
+            <Dialog.Title>Send Bulk Email</Dialog.Title>
+            <Dialog.Content>
+              <TextInput 
+                label="Subject" 
+                value={emailContent.subject} 
+                onChangeText={t => setEmailContent({...emailContent, subject: t})}
+                style={{ marginBottom: 12 }}
+              />
+              <TextInput 
+                label="Message Body" 
+                multiline 
+                numberOfLines={4}
+                value={emailContent.message} 
+                onChangeText={t => setEmailContent({...emailContent, message: t})}
+              />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setBulkEmailVisible(false)}>Cancel</Button>
+              <Button mode="contained" onPress={handleBulkEmail}>Send to All Leads</Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)}>
+            <Dialog.Title>Assign Lead</Dialog.Title>
+            <Dialog.Content>
+              <Text variant="bodyMedium" style={{ marginBottom: 16 }}>Select an employee to handle this lead:</Text>
+              <ScrollView style={{ maxHeight: 200 }}>
+                {employees.filter(e => e.status === 'approved').map(emp => (
+                  <List.Item
+                    key={emp.id}
+                    title={emp.name}
+                    left={p => <List.Icon {...p} icon="account" />}
+                    right={p => (
+                      <IconButton 
+                        icon={selectedEmployee === emp.id ? "check-circle" : "circle-outline"} 
+                        onPress={() => setSelectedEmployee(emp.id)}
+                      />
+                    )}
+                    onPress={() => setSelectedEmployee(emp.id)}
+                  />
+                ))}
+              </ScrollView>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setAssignVisible(false)}>Cancel</Button>
+              <Button mode="contained" disabled={!selectedEmployee} onPress={handleAssign}>Assign Now</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </ScrollView>
     </View>
   );
@@ -211,7 +364,27 @@ const styles = StyleSheet.create({
   appbarTitle: {
     fontWeight: '800',
     color: '#1A237E',
-    fontSize: 18,
+  },
+  actionSurface: {
+    margin: 20,
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+  },
+  actionTitle: {
+    marginBottom: 16,
+    fontWeight: '700',
+    color: '#333',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionBtn: {
+    flex: 1,
+    minWidth: 120,
+    borderRadius: 12,
   },
   loadingContainer: {
     flex: 1,
@@ -222,27 +395,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 15,
     color: '#666',
-    letterSpacing: 1,
-  },
-  header: {
-    padding: 24,
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
-    marginBottom: 20,
-  },
-  greeting: {
-    fontWeight: '800',
-    color: '#1a1a1a',
-  },
-  subtitle: {
-    color: '#757575',
-    marginTop: 4,
   },
   statsRow: {
     flexDirection: 'row',
@@ -265,22 +417,18 @@ const styles = StyleSheet.create({
   statValue: {
     marginTop: 8,
     fontWeight: '800',
-    color: '#1a1a1a',
   },
   divider: {
     marginVertical: 20,
     marginHorizontal: 20,
-    height: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 10,
-    marginBottom: 10,
   },
   sectionTitle: {
     fontWeight: '700',
-    color: '#333',
   },
   itemCard: {
     marginHorizontal: 20,
@@ -315,6 +463,5 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginBottom: 8,
     borderRadius: 12,
-    paddingVertical: 4,
   }
 });

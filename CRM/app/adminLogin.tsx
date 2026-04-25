@@ -68,7 +68,7 @@ export default function AdminLogin() {
 
               <Card style={styles.card} mode="elevated">
                 <Card.Content style={styles.cardContent}>
-                  <Text variant="titleMedium" style={styles.sectionTitle}>System Authentication</Text>
+                  <Text variant="titleMedium" style={styles.sectionTitle}>Admin Login</Text>
 
                   <TextInput
                     label="Admin Email"
