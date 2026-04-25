@@ -79,8 +79,36 @@ exports.adminLogin = async (req, res) => {
 };
 
 exports.getAllEmployees = async (req, res) => {
-  const users = await db.query("SELECT * FROM employees");
-  res.json(users.rows);
+  try {
+    const users = await db.query(`
+      SELECT 
+        e.id, e.name, e.email, e.status,
+        (SELECT COUNT(*) FROM leads WHERE assigned_to = e.id AND status = 'contacted') as contacted_count,
+        (SELECT COUNT(*) FROM leads WHERE assigned_to = e.id AND status = 'converted') as converted_count
+      FROM employees e
+    `);
+    res.json(users.rows);
+  } catch (err) {
+    res.status(500).send("Error fetching employee stats");
+  }
+};
+
+exports.getEmployeeDetails = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Get leads assigned to this employee
+    const leads = await db.query(`
+      SELECT l.*, 
+        (SELECT note FROM interactions WHERE lead_id = l.id ORDER BY created_at DESC LIMIT 1) as last_note
+      FROM leads l 
+      WHERE assigned_to = $1
+      ORDER BY updated_at DESC
+    `, [id]);
+    
+    res.json(leads.rows);
+  } catch (err) {
+    res.status(500).send("Error fetching details");
+  }
 };
 
 exports.approveEmployee = async (req, res) => {

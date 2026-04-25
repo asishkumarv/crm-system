@@ -28,6 +28,8 @@ interface Employee {
   name: string;
   email: string;
   status: string;
+  contacted_count?: number;
+  converted_count?: number;
 }
 
 interface Lead {
@@ -38,6 +40,8 @@ interface Lead {
   query?: string;   
   source?: string;
   assigned_to?: string;
+  status?: string;
+  last_note?: string;
 }
 
 export default function AdminDashboard() {
@@ -53,9 +57,12 @@ export default function AdminDashboard() {
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [bulkEmailVisible, setBulkEmailVisible] = useState(false);
   const [assignVisible, setAssignVisible] = useState(false);
+  const [detailsVisible, setDetailsVisible] = useState(false);
   const [emailContent, setEmailContent] = useState({ subject: "", message: "" });
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+  const [activeEmployeeData, setActiveEmployeeData] = useState<Lead[]>([]);
+  const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
 
   const fetchData = async () => {
     try {
@@ -70,6 +77,17 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const fetchEmployeeDetails = async (emp: Employee) => {
+    setActiveEmployee(emp);
+    setDetailsVisible(true);
+    try {
+      const res = await API.get(`/admin/employee-details/${emp.id}`);
+      setActiveEmployeeData(res.data);
+    } catch (err) {
+      alert("Failed to fetch interaction history");
     }
   };
 
@@ -204,19 +222,21 @@ export default function AdminDashboard() {
                 </View>
               </Surface>
               <Surface style={[styles.statCard, { borderLeftColor: '#FF8F00' }]} elevation={1}>
-                <IconButton icon="clock-alert-outline" iconColor="#FF8F00" size={24} style={styles.statIcon} />
+                <IconButton icon="account-check-outline" iconColor="#FF8F00" size={24} style={styles.statIcon} />
                 <View>
                   <Text variant="displaySmall" style={[styles.statValue, { color: '#FF8F00' }]}>
-                    {employees.filter(e => e.status === 'pending').length}
+                    {employees.reduce((acc, curr) => acc + (Number(curr.contacted_count) || 0), 0)}
                   </Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>PENDING APPROVAL</Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONTACTED</Text>
                 </View>
               </Surface>
               <Surface style={[styles.statCard, { borderLeftColor: '#00796B' }]} elevation={1}>
-                <IconButton icon="target" iconColor="#00796B" size={24} style={styles.statIcon} />
+                <IconButton icon="currency-usd" iconColor="#00796B" size={24} style={styles.statIcon} />
                 <View>
-                  <Text variant="displaySmall" style={[styles.statValue, { color: '#00796B' }]}>{leads.length}</Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>ACTIVE LEADS</Text>
+                  <Text variant="displaySmall" style={[styles.statValue, { color: '#00796B' }]}>
+                    {employees.reduce((acc, curr) => acc + (Number(curr.converted_count) || 0), 0)}
+                  </Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONVERTED</Text>
                 </View>
               </Surface>
             </View>
@@ -284,27 +304,32 @@ export default function AdminDashboard() {
               /* Employee Management */
               <View style={styles.listSection}>
                 <View style={styles.listHeader}>
-                  <Text variant="titleMedium" style={styles.listTitle}>Staff Management</Text>
+                  <Text variant="titleMedium" style={styles.listTitle}>Staff Management (Click for Details)</Text>
                   <Chip icon="check-circle" style={styles.countChip}>{employees.length}</Chip>
                 </View>
                 <View style={styles.itemGrid}>
                   {employees.map((e) => (
-                    <Card key={e.id} style={styles.modernCard} mode="elevated">
-                      <Card.Content style={styles.modernCardContent}>
-                        <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
-                        <View style={styles.cardInfo}>
-                          <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
-                          <Text variant="bodySmall" style={styles.userEmail}>{e.email}</Text>
-                        </View>
-                        <View style={styles.cardAction}>
-                          {e.status === "pending" ? (
-                            <Button mode="contained" onPress={() => approve(e.id)} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
-                          ) : (
-                            <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
-                          )}
-                        </View>
-                      </Card.Content>
-                    </Card>
+                    <TouchableOpacity key={e.id} onPress={() => fetchEmployeeDetails(e)} style={styles.employeeCardWrapper}>
+                      <Card style={styles.modernCard} mode="elevated">
+                        <Card.Content style={styles.modernCardContent}>
+                          <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
+                          <View style={styles.cardInfo}>
+                            <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
+                            <View style={styles.empStatsRow}>
+                              <Text variant="labelSmall" style={{color: '#FF8F00'}}>Contacted: {e.contacted_count || 0}</Text>
+                              <Text variant="labelSmall" style={{color: '#00796B'}}>  •  Converted: {e.converted_count || 0}</Text>
+                            </View>
+                          </View>
+                          <View style={styles.cardAction}>
+                            {e.status === "pending" ? (
+                              <Button mode="contained" onPress={(evt) => { evt.stopPropagation(); approve(e.id); }} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
+                            ) : (
+                              <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
+                            )}
+                          </View>
+                        </Card.Content>
+                      </Card>
+                    </TouchableOpacity>
                   ))}
                 </View>
               </View>
@@ -425,6 +450,57 @@ export default function AdminDashboard() {
               >
                 Confirm Allocation
               </Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={detailsVisible} onDismiss={() => setDetailsVisible(false)} style={styles.dialog}>
+            <Dialog.Title style={styles.dialogTitle}>{activeEmployee?.name}'s Portfolio</Dialog.Title>
+            <Dialog.Content>
+              <View style={styles.dialogStatsHeader}>
+                <View style={styles.dialogStat}>
+                  <Text variant="titleLarge" style={{color: '#FF8F00'}}>{activeEmployee?.contacted_count || 0}</Text>
+                  <Text variant="labelSmall">CONTACTED</Text>
+                </View>
+                <View style={styles.dialogStat}>
+                  <Text variant="titleLarge" style={{color: '#00796B'}}>{activeEmployee?.converted_count || 0}</Text>
+                  <Text variant="labelSmall">CONVERTED</Text>
+                </View>
+              </View>
+              <Divider style={{ marginVertical: 12 }} />
+              <ScrollView style={{ maxHeight: 400 }}>
+                {activeEmployeeData.length === 0 ? (
+                  <Text style={styles.emptyMsg}>No leads assigned to this employee yet.</Text>
+                ) : (
+                  activeEmployeeData.map(l => (
+                    <View key={l.id} style={styles.detailLeadItem}>
+                      <View style={styles.detailLeadHeader}>
+                        <Text variant="titleMedium" style={styles.detailLeadName}>{l.name}</Text>
+                        <Chip 
+                          style={[
+                            styles.statusChip, 
+                            l.status === 'contacted' && { backgroundColor: '#FEF3C7' },
+                            l.status === 'converted' && { backgroundColor: '#D1FAE5' }
+                          ]}
+                          textStyle={{ fontSize: 10, fontWeight: '700' }}
+                        >
+                          {l.status?.toUpperCase() || 'NEW'}
+                        </Chip>
+                      </View>
+                      <Text variant="bodySmall" style={styles.detailLeadPhone}>{l.phone} • {l.source}</Text>
+                      {l.last_note && (
+                        <Surface style={styles.noteSurface} elevation={0}>
+                          <Text variant="labelSmall" style={styles.noteLabel}>LAST INTERACTION:</Text>
+                          <Text variant="bodySmall" style={styles.noteText}>"{l.last_note}"</Text>
+                        </Surface>
+                      )}
+                      <Divider style={{ marginTop: 12 }} />
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setDetailsVisible(false)}>Close</Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
@@ -569,9 +645,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 16,
   },
-  modernCard: {
+  employeeCardWrapper: {
     flex: 1,
     minWidth: 320,
+  },
+  modernCard: {
     borderRadius: 20,
     backgroundColor: '#fff',
   },
@@ -591,8 +669,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E293B',
   },
-  userEmail: {
-    color: '#64748B',
+  empStatsRow: {
+    flexDirection: 'row',
+    marginTop: 4,
   },
   cardAction: {
     marginLeft: 12,
@@ -675,6 +754,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#64748B',
     marginBottom: 20,
+  },
+  dialogStatsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 16,
+  },
+  dialogStat: {
+    alignItems: 'center',
+  },
+  detailLeadItem: {
+    marginBottom: 16,
+  },
+  detailLeadHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLeadName: {
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  detailLeadPhone: {
+    color: '#64748B',
+    marginTop: 2,
+  },
+  noteSurface: {
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1A237E',
+  },
+  noteLabel: {
+    color: '#64748B',
+    fontWeight: '800',
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  noteText: {
+    color: '#1E293B',
+    fontStyle: 'italic',
+    marginTop: 4,
   },
   dialogInput: {
     marginBottom: 12,
