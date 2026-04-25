@@ -1,7 +1,7 @@
 const router = require("express").Router();
-const { uploadLeads, getLeads } = require("../controllers/leadController");
+const { createLead, getLeads } = require("../controllers/leadController");
 
-router.post("/upload", uploadLeads);
+router.post("/", createLead);
 router.get("/", getLeads);
 
 module.exports = router;
