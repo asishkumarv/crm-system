@@ -38,6 +38,9 @@ export default function EmployeeLogin() {
     setLoading(true);
     try {
       const res = await API.post("/employee/login", { email, password });
+      if (Platform.OS === 'web') {
+        (document.activeElement as HTMLElement)?.blur();
+      }
       setAuth({ email, role: 'employee', id: res.data.userId }, res.data.token);
       router.push("/(tabs)/employeeDashboard");
     } catch (err: any) {

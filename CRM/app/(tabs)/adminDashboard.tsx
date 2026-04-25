@@ -34,6 +34,7 @@ interface Lead {
   name: string;
   phone: string;
   email?: string;
+  query?: string;   
   source?: string;
   assigned_to?: string;
 }
@@ -121,14 +122,11 @@ export default function AdminDashboard() {
     }
   };
 
-  // Mock File Upload (for web)
   const handleFileUpload = (event: any) => {
     const file = event.target.files[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append("file", file);
-
     API.post("/leads/upload", formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(res => {
@@ -139,19 +137,10 @@ export default function AdminDashboard() {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'active': return '#4CAF50';
-      case 'pending': return '#FF9800';
-      case 'rejected': return '#F44336';
-      default: return '#757575';
-    }
-  };
-
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <ActivityIndicator size="large" color="#1A237E" />
         <Text style={styles.loadingText}>Loading Analytics...</Text>
       </View>
     );
@@ -159,188 +148,189 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.outerContainer}>
-      <Appbar.Header style={styles.appbar}>
-        <Appbar.Content title="Admin Command Center" titleStyle={styles.appbarTitle} />
+      <Appbar.Header style={styles.appbar} elevated>
+        <Appbar.Content title="Command Center" titleStyle={styles.appbarTitle} />
         <Appbar.Action icon="logout" onPress={logout} color="#1A237E" />
       </Appbar.Header>
 
       <ScrollView 
         style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Bulk Action Buttons */}
-        <Surface style={styles.actionSurface} elevation={2}>
-          <Text variant="titleMedium" style={styles.actionTitle}>Bulk Operations</Text>
-          <View style={styles.actionRow}>
-            {Platform.OS === 'web' && (
-              <Button 
-                icon="upload" 
-                mode="outlined" 
-                onPress={() => (document.getElementById('csv-upload') as any)?.click()}
-                style={styles.actionBtn}
-              >
-                Import CSV
-              </Button>
-            )}
-            <input 
-              type="file" 
-              id="csv-upload" 
-              style={{ display: 'none' }} 
-              accept=".csv"
-              onChange={handleFileUpload} 
-            />
-            <Button 
-              icon="email-multiple" 
-              mode="contained" 
-              buttonColor="#1565C0"
-              onPress={() => setBulkEmailVisible(true)}
-              style={styles.actionBtn}
-              textColor="white"
-            >
-              Bulk Email
-            </Button>
-            <Button 
-              icon="whatsapp" 
-              mode="contained" 
-              buttonColor="#25D366"
-              onPress={() => alert("Bulk WhatsApp integration ready. Connect your API provider in Settings.")}
-              style={styles.actionBtn}
-              textColor="white"
-            >
-              WhatsApp
-            </Button>
-          </View>
-        </Surface>
-
-        <View style={styles.statsRow}>
-          <Surface style={[styles.statCard, { borderLeftColor: '#1565C0' }]} elevation={2}>
-            <Text variant="labelMedium" style={styles.statLabel}>TOTAL EMPLOYEES</Text>
-            <Text variant="headlineSmall" style={styles.statValue}>{employees.length}</Text>
-          </Surface>
-          <Surface style={[styles.statCard, { borderLeftColor: '#FF9800' }]} elevation={2}>
-            <Text variant="labelMedium" style={styles.statLabel}>PENDING APPROVAL</Text>
-            <Text variant="headlineSmall" style={[styles.statValue, { color: '#FF9800' }]}>
-              {employees.filter(e => e.status === 'pending').length}
-            </Text>
-          </Surface>
-        </View>
-
-        <Divider style={styles.divider} />
-
-        <View style={styles.sectionHeader}>
-          <IconButton icon="account-group" size={24} iconColor={theme.colors.primary} />
-          <Text variant="titleLarge" style={styles.sectionTitle}>Employee Control</Text>
-        </View>
-
-        {employees.map((e) => (
-          <Card key={e.id} style={styles.itemCard} mode="outlined">
-            <Card.Content style={styles.cardContent}>
-              <View style={styles.itemMain}>
-                <Avatar.Text size={44} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
-                <View style={styles.itemInfo}>
-                  <Text variant="titleMedium">{e.name}</Text>
-                  <Text variant="bodySmall">{e.email}</Text>
+        <View style={styles.responsiveWrapper}>
+          
+          {/* Dashboard Hero / Stats Summary */}
+          <View style={styles.heroSection}>
+            <Text variant="headlineMedium" style={styles.heroTitle}>Overview</Text>
+            <View style={styles.gridRow}>
+              <Surface style={[styles.statCard, { borderLeftColor: '#1A237E' }]} elevation={1}>
+                <IconButton icon="account-tie" iconColor="#1A237E" size={24} style={styles.statIcon} />
+                <View>
+                  <Text variant="displaySmall" style={styles.statValue}>{employees.length}</Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL STAFF</Text>
                 </View>
-              </View>
-              <View style={styles.itemActions}>
-                <Chip 
-                  textStyle={{ color: '#fff', fontSize: 10 }}
-                  style={{ backgroundColor: getStatusColor(e.status), height: 24 }}
+              </Surface>
+              <Surface style={[styles.statCard, { borderLeftColor: '#FF8F00' }]} elevation={1}>
+                <IconButton icon="clock-alert-outline" iconColor="#FF8F00" size={24} style={styles.statIcon} />
+                <View>
+                  <Text variant="displaySmall" style={[styles.statValue, { color: '#FF8F00' }]}>
+                    {employees.filter(e => e.status === 'pending').length}
+                  </Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>PENDING APPROVAL</Text>
+                </View>
+              </Surface>
+              <Surface style={[styles.statCard, { borderLeftColor: '#00796B' }]} elevation={1}>
+                <IconButton icon="target" iconColor="#00796B" size={24} style={styles.statIcon} />
+                <View>
+                  <Text variant="displaySmall" style={[styles.statValue, { color: '#00796B' }]}>{leads.length}</Text>
+                  <Text variant="labelMedium" style={styles.statLabel}>ACTIVE LEADS</Text>
+                </View>
+              </Surface>
+            </View>
+          </View>
+
+          {/* Core Tools Section */}
+          <Surface style={styles.toolsSurface} elevation={2}>
+            <Text variant="titleLarge" style={styles.sectionHeading}>Business Intelligence Tools</Text>
+            <View style={styles.toolsGrid}>
+              {Platform.OS === 'web' && (
+                <Button 
+                  icon="file-upload-outline" 
+                  mode="contained-tonal" 
+                  onPress={() => (document.getElementById('csv-upload') as any)?.click()}
+                  style={styles.toolBtn}
+                  contentStyle={styles.toolBtnContent}
                 >
-                  {e.status.toUpperCase()}
-                </Chip>
-                {e.status === "pending" && (
-                  <Button 
-                    mode="contained" 
-                    onPress={() => approve(e.id)} 
-                    style={styles.approveBtn}
-                    buttonColor="#1565C0"
-                    textColor="white"
-                  >
-                    Approve
-                  </Button>
-                )}
+                  Import Leads
+                </Button>
+              )}
+              <input type="file" id="csv-upload" style={{ display: 'none' }} accept=".csv" onChange={handleFileUpload} />
+              
+              <Button 
+                icon="email-plus-outline" 
+                mode="contained" 
+                buttonColor="#1A237E"
+                onPress={() => setBulkEmailVisible(true)}
+                style={styles.toolBtn}
+                contentStyle={styles.toolBtnContent}
+                textColor="white"
+              >
+                Bulk Email
+              </Button>
+              
+              <Button 
+                icon="whatsapp" 
+                mode="contained" 
+                buttonColor="#25D366"
+                onPress={() => alert("Connect to WhatsApp Business API...")}
+                style={styles.toolBtn}
+                contentStyle={styles.toolBtnContent}
+                textColor="white"
+              >
+                Bulk WhatsApp
+              </Button>
+            </View>
+          </Surface>
+
+          {/* Lists Section */}
+          <View style={styles.listsContainer}>
+            {/* Employee Management */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeader}>
+                <Text variant="titleMedium" style={styles.listTitle}>Staff Management</Text>
+                <Chip icon="check-circle" style={styles.countChip}>{employees.length}</Chip>
               </View>
-            </Card.Content>
-          </Card>
-        ))}
+              {employees.map((e) => (
+                <Card key={e.id} style={styles.modernCard} mode="elevated">
+                  <Card.Content style={styles.modernCardContent}>
+                    <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
+                    <View style={styles.cardInfo}>
+                      <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
+                      <Text variant="bodySmall" style={styles.userEmail}>{e.email}</Text>
+                    </View>
+                    <View style={styles.cardAction}>
+                      {e.status === "pending" ? (
+                        <Button mode="contained" onPress={() => approve(e.id)} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
+                      ) : (
+                        <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
+                      )}
+                    </View>
+                  </Card.Content>
+                </Card>
+              ))}
+            </View>
 
-        <View style={[styles.sectionHeader, { marginTop: 30 }]}>
-          <IconButton icon="bullseye-arrow" size={24} iconColor="#E91E63" />
-          <Text variant="titleLarge" style={styles.sectionTitle}>Lead Management</Text>
+            {/* Lead Queue */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeader}>
+                <Text variant="titleMedium" style={styles.listTitle}>Lead Allocation Queue</Text>
+                <Chip icon="trending-up" style={styles.countChip}>{leads.length}</Chip>
+              </View>
+              {leads.map((l) => (
+                <Surface key={l.id} style={styles.leadSurface} elevation={1}>
+                  <View style={styles.leadMain}>
+                    <View style={styles.leadMeta}>
+                      <Text variant="titleMedium" style={styles.leadName}>{l.name}</Text>
+                      <View style={styles.sourceTag}>
+                        <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} />
+                        <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
+                        <Text variant="labelSmall" style={styles.sourceText}>{'     Lead Purpose: '+l.query}</Text>
+                      </View>
+                    </View>
+                    <IconButton 
+                      icon="account-plus-outline" 
+                      mode="contained-tonal" 
+                      onPress={() => { setSelectedLead(l.id); setAssignVisible(true); }}
+                    />
+                  </View>
+                  <Divider style={{ marginVertical: 8 }} />
+                  <View style={styles.leadFooter}>
+                    <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
+                    <Text variant="labelSmall" style={styles.phoneText}>{l.email}</Text>
+                    <Chip style={styles.assignChip}>{l.assigned_to ? 'Assigned' : 'Unallocated'}</Chip>
+                  </View>
+                </Surface>
+              ))}
+            </View>
+          </View>
         </View>
-
-        {leads.map((l) => (
-          <List.Item
-            key={l.id}
-            title={l.name}
-            description={`${l.phone} • Source: ${l.source || 'Direct'}\n${l.assigned_to ? 'Assigned' : 'Unassigned'}`}
-            left={props => <List.Icon {...props} icon="account-circle" color="#E91E63" />}
-            right={props => (
-              <IconButton 
-                icon="account-arrow-right" 
-                onPress={() => {
-                  setSelectedLead(l.id);
-                  setAssignVisible(true);
-                }} 
-              />
-            )}
-            style={styles.listItem}
-          />
-        ))}
         <View style={{ height: 40 }} />
 
         {/* Portals */}
         <Portal>
-          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)}>
-            <Dialog.Title>Send Bulk Email</Dialog.Title>
+          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)} style={styles.dialog}>
+            <Dialog.Title style={styles.dialogTitle}>Broadcast Email</Dialog.Title>
             <Dialog.Content>
-              <TextInput 
-                label="Subject" 
-                value={emailContent.subject} 
-                onChangeText={t => setEmailContent({...emailContent, subject: t})}
-                style={{ marginBottom: 12 }}
-              />
-              <TextInput 
-                label="Message Body" 
-                multiline 
-                numberOfLines={4}
-                value={emailContent.message} 
-                onChangeText={t => setEmailContent({...emailContent, message: t})}
-              />
+              <TextInput label="Subject" value={emailContent.subject} onChangeText={t => setEmailContent({...emailContent, subject: t})} mode="outlined" style={styles.dialogInput} />
+              <TextInput label="Message" multiline numberOfLines={5} value={emailContent.message} onChangeText={t => setEmailContent({...emailContent, message: t})} mode="outlined" style={styles.dialogInput} />
             </Dialog.Content>
             <Dialog.Actions>
               <Button onPress={() => setBulkEmailVisible(false)}>Cancel</Button>
-              <Button mode="contained" onPress={handleBulkEmail}>Send to All Leads</Button>
+              <Button mode="contained" onPress={handleBulkEmail} buttonColor="#1A237E" textColor="white">Send Broadcast</Button>
             </Dialog.Actions>
           </Dialog>
 
-          <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)}>
-            <Dialog.Title>Assign Lead</Dialog.Title>
+          <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)} style={styles.dialog}>
+            <Dialog.Title style={styles.dialogTitle}>Allocate Lead</Dialog.Title>
             <Dialog.Content>
-              <Text variant="bodyMedium" style={{ marginBottom: 16 }}>Select an employee to handle this lead:</Text>
-              <ScrollView style={{ maxHeight: 200 }}>
+              <ScrollView style={{ maxHeight: 300 }}>
                 {employees.filter(e => e.status === 'approved').map(emp => (
                   <List.Item
                     key={emp.id}
                     title={emp.name}
-                    left={p => <List.Icon {...p} icon="account" />}
-                    right={p => (
-                      <IconButton 
-                        icon={selectedEmployee === emp.id ? "check-circle" : "circle-outline"} 
-                        onPress={() => setSelectedEmployee(emp.id)}
-                      />
-                    )}
+                    description={emp.email}
                     onPress={() => setSelectedEmployee(emp.id)}
+                    left={p => <Avatar.Text {...p} size={36} label={emp.name[0]} />}
+                    right={p => <IconButton icon={selectedEmployee === emp.id ? "check-circle" : "circle-outline"} iconColor={selectedEmployee === emp.id ? "#1A237E" : "#ccc"} />}
+                    style={[styles.listItem, selectedEmployee === emp.id && styles.selectedListItem]}
                   />
                 ))}
               </ScrollView>
             </Dialog.Content>
             <Dialog.Actions>
               <Button onPress={() => setAssignVisible(false)}>Cancel</Button>
-              <Button mode="contained" disabled={!selectedEmployee} onPress={handleAssign}>Assign Now</Button>
+              <Button mode="contained" disabled={!selectedEmployee} onPress={handleAssign} buttonColor="#1A237E" textColor="white">Confirm Allocation</Button>
             </Dialog.Actions>
           </Dialog>
         </Portal>
@@ -352,39 +342,185 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  responsiveWrapper: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 24,
+  },
   appbar: {
     backgroundColor: '#fff',
-    elevation: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   appbarTitle: {
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#1A237E',
+    letterSpacing: 1,
   },
-  actionSurface: {
-    margin: 20,
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: '#fff',
+  heroSection: {
+    marginBottom: 32,
   },
-  actionTitle: {
-    marginBottom: 16,
-    fontWeight: '700',
-    color: '#333',
+  heroTitle: {
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 20,
   },
-  actionRow: {
+  gridRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 16,
   },
-  actionBtn: {
+  statCard: {
     flex: 1,
-    minWidth: 120,
+    minWidth: 280,
+    padding: 24,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderLeftWidth: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    backgroundColor: '#F1F5F9',
+    marginRight: 16,
+  },
+  statValue: {
+    fontWeight: '900',
+    color: '#1E293B',
+    lineHeight: 40,
+  },
+  statLabel: {
+    color: '#64748B',
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  toolsSurface: {
+    padding: 24,
+    borderRadius: 24,
+    backgroundColor: '#fff',
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sectionHeading: {
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 20,
+  },
+  toolsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  toolBtn: {
+    flex: 1,
+    minWidth: 180,
     borderRadius: 12,
+  },
+  toolBtnContent: {
+    height: 48,
+  },
+  listsContainer: {
+    flexDirection: Platform.OS === 'web' && Dimensions.get('window').width > 900 ? 'row' : 'column',
+    gap: 24,
+  },
+  listSection: {
+    flex: 1,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  listTitle: {
+    fontWeight: '700',
+    color: '#475569',
+  },
+  countChip: {
+    backgroundColor: '#F1F5F9',
+  },
+  modernCard: {
+    marginBottom: 12,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+  },
+  modernCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    backgroundColor: '#E2E8F0',
+  },
+  cardInfo: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  userName: {
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  userEmail: {
+    color: '#64748B',
+  },
+  cardAction: {
+    marginLeft: 12,
+  },
+  statusChip: {
+    backgroundColor: '#F0FDF4',
+  },
+  leadSurface: {
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  leadMain: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  leadMeta: {
+    flex: 1,
+  },
+  leadName: {
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  sourceTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  sourceText: {
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  leadFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  phoneText: {
+    color: '#1A237E',
+    fontWeight: '700',
+  },
+  assignChip: {
+    height: 24,
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
@@ -393,75 +529,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   loadingText: {
-    marginTop: 15,
-    color: '#666',
+    marginTop: 16,
+    fontWeight: '600',
+    color: '#1A237E',
   },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  statCard: {
-    width: (Dimensions.get('window').width - 50) / 2,
-    padding: 16,
-    borderRadius: 16,
+  dialog: {
+    borderRadius: 24,
     backgroundColor: '#fff',
-    borderLeftWidth: 4,
   },
-  statLabel: {
-    color: '#9E9E9E',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  statValue: {
-    marginTop: 8,
+  dialogTitle: {
+    textAlign: 'center',
     fontWeight: '800',
   },
-  divider: {
-    marginVertical: 20,
-    marginHorizontal: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  sectionTitle: {
-    fontWeight: '700',
-  },
-  itemCard: {
-    marginHorizontal: 20,
+  dialogInput: {
     marginBottom: 12,
-    borderRadius: 16,
     backgroundColor: '#fff',
-  },
-  cardContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  itemMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatar: {
-    backgroundColor: '#E3F2FD',
-  },
-  itemInfo: {
-    marginLeft: 12,
-  },
-  itemActions: {
-    alignItems: 'flex-end',
-  },
-  approveBtn: {
-    marginTop: 8,
-    borderRadius: 8,
   },
   listItem: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 8,
     borderRadius: 12,
+    marginBottom: 4,
+  },
+  selectedListItem: {
+    backgroundColor: '#F1F5F9',
+  },
+  actionButton: {
+    borderRadius: 8,
   }
 });

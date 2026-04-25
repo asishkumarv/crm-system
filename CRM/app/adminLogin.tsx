@@ -38,6 +38,9 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       const res = await API.post("/admin/login", { email, password });
+      if (Platform.OS === 'web') {
+        (document.activeElement as HTMLElement)?.blur();
+      }
       setAuth({ email, role: 'admin' }, res.data.token);
       router.push("/(tabs)/adminDashboard");
     } catch (err: any) {
