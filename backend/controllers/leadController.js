@@ -3,8 +3,9 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
+const twilio = require("twilio");
 
-// EMAIL CONFIG for bulk emails
+// EMAIL CONFIG
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -12,6 +13,12 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
+
+// TWILIO CONFIG for WhatsApp
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
 
 exports.createLead = async (req, res) => {
   const { name, phone, email, source, query } = req.body;
@@ -132,5 +139,46 @@ exports.logInteraction = async (req, res) => {
     } catch (innerErr) {
        res.status(500).send("Error updating lead state");
     }
+  }
+};
+
+exports.sendBulkWhatsApp = async (req, res) => {
+  const { message, leadIds } = req.body;
+  const twilioNumber = process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886"; // Default sandbox number
+
+  try {
+    let query = "SELECT phone FROM leads WHERE phone IS NOT NULL";
+    let params = [];
+
+    if (leadIds && leadIds !== "all") {
+      query += " AND id = ANY($1)";
+      params.push(leadIds);
+    }
+
+    const result = await db.query(query, params);
+    const phones = result.rows.map((r) => r.phone);
+
+    if (phones.length === 0) return res.status(400).send("No valid phone numbers found");
+
+    const results = await Promise.allSettled(
+      phones.map((phone) => {
+        // Ensure phone is in whatsapp format: whatsapp:+1234567890
+        const formattedPhone = phone.startsWith("whatsapp:") ? phone : `whatsapp:${phone.startsWith("+") ? phone : "+" + phone}`;
+        
+        return twilioClient.messages.create({
+          from: twilioNumber,
+          to: formattedPhone,
+          body: message,
+        });
+      })
+    );
+
+    const successful = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    res.send(`WhatsApp messages processed: ${successful} sent, ${failed} failed.`);
+  } catch (err) {
+    console.error("WhatsApp Bulk Error:", err);
+    res.status(500).send("Error sending bulk WhatsApp messages");
   }
 };

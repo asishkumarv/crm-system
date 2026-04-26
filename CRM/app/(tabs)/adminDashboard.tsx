@@ -56,9 +56,11 @@ export default function AdminDashboard() {
   const [viewMode, setViewMode] = useState<'employees' | 'leads'>('employees');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [bulkEmailVisible, setBulkEmailVisible] = useState(false);
+  const [bulkWhatsAppVisible, setBulkWhatsAppVisible] = useState(false);
   const [assignVisible, setAssignVisible] = useState(false);
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [emailContent, setEmailContent] = useState({ subject: "", message: "" });
+  const [whatsAppContent, setWhatsAppContent] = useState({ message: "" });
   const [selectedLead, setSelectedLead] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [activeEmployeeData, setActiveEmployeeData] = useState<Lead[]>([]);
@@ -154,6 +156,20 @@ export default function AdminDashboard() {
       setSelectedLeads([]);
     } catch (err) {
       alert("Failed to send broadcast");
+    }
+  };
+
+  const handleBulkWhatsApp = async () => {
+    try {
+      await API.post("/leads/bulk-whatsapp", {
+        ...whatsAppContent,
+        leadIds: selectedLeads.length > 0 ? selectedLeads : "all"
+      });
+      alert("WhatsApp messages initiated successfully!");
+      setBulkWhatsAppVisible(false);
+      setWhatsAppContent({ message: "" });
+    } catch (err) {
+      alert("Failed to send bulk WhatsApp messages");
     }
   };
 
@@ -328,7 +344,7 @@ export default function AdminDashboard() {
                 icon="whatsapp" 
                 mode="contained" 
                 buttonColor="#25D366"
-                onPress={() => alert("Connect to WhatsApp Business API...")}
+                onPress={() => setBulkWhatsAppVisible(true)}
                 style={styles.toolBtn}
                 contentStyle={styles.toolBtnContent}
                 textColor="white"
@@ -514,6 +530,29 @@ export default function AdminDashboard() {
             <Dialog.Actions style={{ paddingHorizontal: 20 }}>
               <Button onPress={() => setBulkEmailVisible(false)}>Cancel</Button>
               <Button mode="contained" onPress={handleBulkEmail} buttonColor="#1A237E" textColor="white" style={{ flex: 1, borderRadius: 12 }}>Send Broadcast</Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={bulkWhatsAppVisible} onDismiss={() => setBulkWhatsAppVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
+            <Dialog.Title style={styles.dialogTitle}>Broadcast WhatsApp</Dialog.Title>
+            <Dialog.Content>
+              <Text variant="bodySmall" style={styles.dialogSubtitle}>
+                Twilio Sandbox Note: Recipients must have joined your sandbox (e.g., "join your-keyword").
+              </Text>
+              <TextInput 
+                label="Message Content" 
+                multiline 
+                numberOfLines={5} 
+                value={whatsAppContent.message} 
+                onChangeText={t => setWhatsAppContent({...whatsAppContent, message: t})} 
+                mode="outlined" 
+                style={styles.dialogInput} 
+                textColor="#000" 
+              />
+            </Dialog.Content>
+            <Dialog.Actions style={{ paddingHorizontal: 20 }}>
+              <Button onPress={() => setBulkWhatsAppVisible(false)}>Cancel</Button>
+              <Button mode="contained" onPress={handleBulkWhatsApp} buttonColor="#25D366" textColor="white" style={{ flex: 1, borderRadius: 12 }}>Send WhatsApp</Button>
             </Dialog.Actions>
           </Dialog>
 

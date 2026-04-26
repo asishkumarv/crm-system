@@ -4,6 +4,7 @@ const {
   getLeads, 
   uploadLeadsCSV, 
   sendBulkEmail,
+  sendBulkWhatsApp,
   assignLead,
   logInteraction 
 } = require("../controllers/leadController");
@@ -14,6 +15,7 @@ router.post("/", createLead);
 router.get("/", getLeads);
 router.post("/upload", upload.single("file"), uploadLeadsCSV);
 router.post("/bulk-email", sendBulkEmail);
+router.post("/bulk-whatsapp", sendBulkWhatsApp);
 router.post("/assign", assignLead);
 router.put("/:id/status", logInteraction);
 
