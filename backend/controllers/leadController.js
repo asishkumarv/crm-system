@@ -155,28 +155,55 @@ exports.sendBulkWhatsApp = async (req, res) => {
       params.push(leadIds);
     }
 
-    const result = await db.query(query, params);
-    const phones = result.rows.map((r) => r.phone);
+    let result;
+    try {
+      result = await db.query(query, params);
+    } catch (fetchErr) {
+      console.error("Database Fetch Error (Leads):", fetchErr);
+      return res.status(500).send("Error fetching lead contact data");
+    }
 
-    if (phones.length === 0) return res.status(400).send("No valid phone numbers found");
+    const phones = result.rows.map((r) => r.phone);
+    if (phones.length === 0) {
+      console.warn("No valid phone numbers found for the selected criteria.");
+      return res.status(400).send("No valid phone numbers found");
+    }
+
+    console.log(`🚀 Starting Bulk WhatsApp Broadcast for ${phones.length} recipients...`);
 
     const results = await Promise.allSettled(
       phones.map((phone) => {
-        // Ensure phone is in whatsapp format: whatsapp:+1234567890
-        const formattedPhone = phone.startsWith("whatsapp:") ? phone : `whatsapp:${phone.startsWith("+") ? phone : "+" + phone}`;
+        // Robust phone formatting: ensure it starts with whatsapp:+ and has a + sign
+        let cleanPhone = phone.trim();
+        if (!cleanPhone.startsWith("+")) {
+          cleanPhone = "+" + cleanPhone;
+        }
+        const formattedPhone = `whatsapp:${cleanPhone}`;
         
+        console.log(`Attempting to send WhatsApp to: ${formattedPhone}`);
+
         return twilioClient.messages.create({
           from: twilioNumber,
           to: formattedPhone,
           body: message,
+        }).then(msg => {
+          console.log(`✅ Message sent to ${formattedPhone} (SID: ${msg.sid})`);
+          return msg;
+        }).catch(err => {
+          console.error(`❌ Failed to send to ${formattedPhone}: ${err.message}`);
+          throw err;
         });
       })
     );
 
     const successful = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.filter((r) => r.status === "rejected").length;
+    const failedResults = results.filter((r) => r.status === "rejected");
+    
+    if (failedResults.length > 0) {
+      console.error("WhatsApp Send Failures:", failedResults.map(f => f.reason?.message || f));
+    }
 
-    res.send(`WhatsApp messages processed: ${successful} sent, ${failed} failed.`);
+    res.send(`WhatsApp messages processed: ${successful} sent, ${failedResults.length} failed.`);
   } catch (err) {
     console.error("WhatsApp Bulk Error:", err);
     res.status(500).send("Error sending bulk WhatsApp messages");
