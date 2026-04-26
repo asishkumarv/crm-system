@@ -14,14 +14,15 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.createLead = async (req, res) => {
-  const { name, phone, email, source } = req.body;
+  const { name, phone, email, source, query } = req.body;
   try {
     await db.query(
-      "INSERT INTO leads(name,phone,email,source) VALUES($1,$2,$3,$4)",
-      [name, phone, email, source]
+      "INSERT INTO leads(name,phone,email,source,query) VALUES($1,$2,$3,$4,$5)",
+      [name, phone, email, source, query]
     );
     res.send("Lead added successfully");
   } catch (err) {
+    console.error("Error adding lead:", err);
     res.status(500).send("Error adding lead");
   }
 };

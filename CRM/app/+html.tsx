@@ -32,4 +32,10 @@ const iconStyles = `
   font-weight: normal;
   font-style: normal;
 }
+@font-face {
+  font-family: 'MaterialIcons';
+  src: url('https://fonts.gstatic.com/s/materialicons/v140/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
 `;

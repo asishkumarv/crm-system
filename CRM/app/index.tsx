@@ -53,6 +53,13 @@ export default function LandingPage() {
       icon: "briefcase-variant-outline",
       route: "/employeeLogin",
       color: "#00796B",
+    },
+    {
+      title: "Public Inquiry",
+      subtitle: "Submit your service request and get a premium consultation.",
+      icon: "message-draw",
+      route: "/public-form",
+      color: "#D81B60",
     }
   ];
 
