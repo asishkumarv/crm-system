@@ -226,6 +226,7 @@ export default function AdminDashboard() {
     <View style={styles.outerContainer}>
       <Appbar.Header style={styles.appbar} elevated>
         <Appbar.Content title="Admin Dashboard" titleStyle={styles.appbarTitle} />
+        <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/adminProfile")} color="#1A237E" />
         <Appbar.Action icon="logout" onPress={logout} color="#1A237E" />
       </Appbar.Header>
 

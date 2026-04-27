@@ -71,7 +71,27 @@ const initDB = async () => {
 
     // Ensure the column name matches user's expectation (status vs type)
     await db.query("ALTER TABLE interactions ADD COLUMN IF NOT EXISTS status VARCHAR(50)");
-    
+
+    // ── New profile columns ───────────────────────────────────────────────────
+    await db.query("ALTER TABLE admins ADD COLUMN IF NOT EXISTS phone VARCHAR(30)");
+    await db.query("ALTER TABLE admins ADD COLUMN IF NOT EXISTS company VARCHAR(100)");
+    await db.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone VARCHAR(30)");
+    await db.query("ALTER TABLE employees ADD COLUMN IF NOT EXISTS department VARCHAR(100)");
+
+    // ── Password Reset OTPs table ─────────────────────────────────────────────
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_otps (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(100) NOT NULL,
+        otp VARCHAR(10) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'employee',
+        used BOOLEAN DEFAULT false,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(email, role)
+      );
+    `);
+
     console.log("Database tables verified/created");
   } catch (err) {
     console.error("DB Initialization Error:", err);

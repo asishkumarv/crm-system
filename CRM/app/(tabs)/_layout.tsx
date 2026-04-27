@@ -35,9 +35,15 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="explore"
-        options={{
-          href: null, // Hide explore tab
-        }}
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="adminProfile"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="employeeProfile"
+        options={{ href: null }}
       />
     </Tabs>
   );

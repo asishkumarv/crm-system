@@ -116,7 +116,10 @@ export default function AdminLogin() {
                   </Button>
 
                   <View style={styles.footer}>
-                    <TouchableOpacity onPress={() => router.push("/register")}>
+                    <TouchableOpacity onPress={() => router.push("/adminForgotPassword")}>
+                      <Text style={styles.link}>Forgot Password?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push("/register")} style={{ marginTop: 12 }}>
                       <Text style={styles.link}>New admin? Register here.</Text>
                     </TouchableOpacity>
                   </View>

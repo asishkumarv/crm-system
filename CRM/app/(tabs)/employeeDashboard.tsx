@@ -123,6 +123,7 @@ export default function EmployeeDashboard() {
     <View style={styles.outerContainer}>
       <Appbar.Header style={styles.appbar} elevated>
         <Appbar.Content title="Portfolio" titleStyle={styles.appbarTitle} />
+        <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/employeeProfile")} color="#0F172A" />
         <Appbar.Action icon="logout" onPress={logout} color="#0F172A" />
       </Appbar.Header>
 

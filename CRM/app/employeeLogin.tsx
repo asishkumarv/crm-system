@@ -116,7 +116,10 @@ export default function EmployeeLogin() {
                   </Button>
 
                   <View style={styles.footer}>
-                    <TouchableOpacity onPress={() => router.push("/register")}>
+                    <TouchableOpacity onPress={() => router.push("/employeeForgotPassword")}>
+                      <Text style={styles.link}>Forgot Password?</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push("/register")} style={{ marginTop: 12 }}>
                       <Text style={styles.link}>Request Access Privileges</Text>
                     </TouchableOpacity>
                   </View>
