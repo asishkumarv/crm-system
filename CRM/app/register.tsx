@@ -6,8 +6,7 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ImageBackground, 
-  Image,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity
 } from "react-native";
 import { 
@@ -15,21 +14,15 @@ import {
   Button, 
   Text, 
   Card, 
-  useTheme, 
   Portal, 
   Dialog,
-  SegmentedButtons,
-  MD3DarkTheme,
-  MD3LightTheme
+  SegmentedButtons
 } from "react-native-paper";
 import { router } from "expo-router";
-import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
-const { width, height } = Dimensions.get("window");
-
 export default function Register() {
-  const paperTheme = useTheme();
+  const { width, height } = useWindowDimensions();
   const [role, setRole] = useState("employee");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -42,6 +35,9 @@ export default function Register() {
   const [showOTP, setShowOTP] = useState(false);
   const [error, setError] = useState("");
   const [visible, setVisible] = useState(false);
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768 && width < 1024;
 
   const hideDialog = () => setVisible(false);
 
@@ -92,7 +88,7 @@ export default function Register() {
     <View style={styles.outerContainer}>
       <ImageBackground 
         source={require("../assets/images/auth_bg.png")}
-        style={styles.background}
+        style={[styles.background, { width, height }]}
         resizeMode="cover"
       >
         <KeyboardAvoidingView 
@@ -100,15 +96,15 @@ export default function Register() {
           style={styles.flex}
         >
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.glassWrapper}>
+            <View style={[styles.glassWrapper, { maxWidth: isDesktop ? 500 : isTablet ? 450 : '100%' }]}>
               <View style={styles.logoSection}>
-                <Text variant="headlineSmall" style={styles.brandName}>CRM</Text>
-                {/* <Text variant="bodyMedium" style={styles.brandTagline}>Enterprise Resource Intelligence</Text> */}
+                <Text variant="displaySmall" style={styles.brandName}>CRM</Text>
+                <Text variant="bodyMedium" style={styles.brandTagline}>JOIN THE ENTERPRISE ECOSYSTEM</Text>
               </View>
 
               <Card style={styles.card} mode="elevated">
                 <Card.Content style={styles.cardContent}>
-                  <Text variant="titleMedium" style={styles.sectionTitle}>Account Registration</Text>
+                  <Text variant="titleLarge" style={styles.sectionTitle}>Create Account</Text>
                   
                   <SegmentedButtons
                     value={role}
@@ -117,7 +113,7 @@ export default function Register() {
                     theme={{ colors: { secondaryContainer: '#E3F2FD', onSecondaryContainer: '#1565C0' } }}
                     buttons={[
                       { value: "employee", label: "Employee", icon: "account-tie" },
-                      { value: "admin", label: "Administrator", icon: "shield-crown" },
+                      { value: "admin", label: "Admin", icon: "shield-crown" },
                     ]}
                   />
 
@@ -173,7 +169,7 @@ export default function Register() {
                     buttonColor="#1565C0"
                     textColor="white"
                   >
-                    {showOTP ? "RESEND VERIFICATION CODE" : "CREATE ACCOUNT"}
+                    {showOTP ? "RESEND CODE" : "CREATE ACCOUNT"}
                   </Button>
 
                   <View style={styles.divider}>
@@ -183,7 +179,7 @@ export default function Register() {
                   </View>
 
                   <View style={styles.footer}>
-                    <Text variant="bodySmall" style={styles.footerText}>Already have an account?</Text>
+                    <Text variant="bodyMedium" style={styles.footerText}>Already registered?</Text>
                     <View style={styles.linkRow}>
                       <TouchableOpacity onPress={() => router.push("/adminLogin")}>
                         <Text style={styles.link}>Admin Access</Text>
@@ -246,8 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   background: {
-    width: width,
-    height: height,
+    flex: 1,
   },
   flex: {
     flex: 1,
@@ -256,53 +251,38 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     padding: 24,
-    paddingTop: 80,
-    paddingBottom: 40,
+    paddingTop: 60,
+    paddingBottom: 60,
   },
   glassWrapper: {
     width: '100%',
-    maxWidth: 450,
     alignSelf: 'center',
   },
   logoSection: {
     alignItems: "center",
-    marginBottom: 32,
-  },
-  logo: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 40,
   },
   brandName: {
     color: "#fff",
-    fontWeight: "800",
-    letterSpacing: 2,
-    ...Platform.select({
-      web: {
-        textShadow: "0px 2px 4px rgba(0,0,0,0.3)",
-      },
-      default: {
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
-      }
-    })
+    fontWeight: "900",
+    letterSpacing: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   brandTagline: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
-    letterSpacing: 1.5,
-    marginTop: 4,
+    letterSpacing: 2,
+    marginTop: 8,
+    fontWeight: '700',
   },
-    card: {
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+  card: {
+    borderRadius: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
     ...Platform.select({
       web: {
-        boxShadow: "0px 10px 20px rgba(0,0,0,0.2)",
+        boxShadow: "0px 20px 50px rgba(0,0,0,0.25)",
       },
       default: {
         shadowColor: "#000",
@@ -312,71 +292,57 @@ const styles = StyleSheet.create({
         elevation: 10,
       }
     }),
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
   },
   cardContent: {
-    padding: 16,
+    padding: 24,
   },
   sectionTitle: {
     textAlign: "center",
     color: "#1A237E",
-    fontWeight: "700",
-    marginBottom: 24,
+    fontWeight: "800",
+    marginBottom: 32,
     letterSpacing: 0.5,
   },
   segmented: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   input: {
-    marginBottom: 20,
+    marginBottom: 24,
     backgroundColor: "transparent",
-    fontSize: 14,
   },
   mainButton: {
-    marginTop: 12,
-    borderRadius: 12,
-    paddingVertical: 4,
-    ...Platform.select({
-      web: {
-        boxShadow: "0px 4px 8px rgba(21, 101, 192, 0.3)",
-      },
-      default: {
-        shadowColor: "#1565C0",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-      }
-    })
+    marginTop: 8,
+    borderRadius: 14,
+    paddingVertical: 6,
   },
   buttonLabel: {
-    fontWeight: "700",
-    letterSpacing: 1,
-    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    fontSize: 16,
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: 32,
   },
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#EEE",
   },
   dividerText: {
-    marginHorizontal: 12,
-    color: "#616161",
-    fontSize: 10,
-    fontWeight: "700",
+    marginHorizontal: 16,
+    color: "#999",
+    fontSize: 11,
+    fontWeight: "800",
   },
   footer: {
     alignItems: "center",
   },
   footerText: {
-    color: "#424242",
-    marginBottom: 8,
+    color: "#666",
+    marginBottom: 12,
+    fontWeight: '500',
   },
   linkRow: {
     flexDirection: "row",
@@ -386,32 +352,33 @@ const styles = StyleSheet.create({
   },
   link: {
     color: "#1565C0",
-    fontWeight: "700",
-    fontSize: 13,
+    fontWeight: "800",
+    fontSize: 14,
   },
   dot: {
-    marginHorizontal: 10,
-    color: "#BDBDBD",
+    marginHorizontal: 12,
+    color: "#DDD",
+    fontSize: 18,
   },
   dialog: {
-    borderRadius: 20,
+    borderRadius: 28,
     backgroundColor: '#fff',
   },
   dialogTitle: {
     textAlign: 'center',
     color: '#1565C0',
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
   dialogMsg: {
     textAlign: 'center',
-    lineHeight: 22,
-    color: '#444',
+    lineHeight: 24,
+    color: '#555',
   },
   otpInput: {
-    marginTop: 20,
-    fontSize: 24,
-    fontWeight: 'bold',
-    letterSpacing: 8,
+    marginTop: 24,
+    fontSize: 28,
+    fontWeight: '900',
+    letterSpacing: 10,
   },
   errorTitle: {
     color: '#D32F2F',

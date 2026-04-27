@@ -5,8 +5,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
-  Dimensions,
+  useWindowDimensions,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
 import {
   TextInput,
@@ -18,8 +19,6 @@ import {
 } from "react-native-paper";
 import { router } from "expo-router";
 import API from "../services/api";
-
-const { width, height } = Dimensions.get("window");
 
 type Step = "email" | "otp" | "newPassword";
 
@@ -34,26 +33,32 @@ export default function EmployeeForgotPassword() {
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogSuccess, setDialogSuccess] = useState(false);
 
+  const { width, height } = useWindowDimensions();
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768 && width < 1024;
+
   const showDialog = (msg: string, success = false) => {
     setDialogMsg(msg);
     setDialogSuccess(success);
     setDialogVisible(true);
   };
 
+  // Step 1: Request OTP
   const handleRequestOtp = async () => {
     if (!email) return;
     setLoading(true);
     try {
       await API.post("/employee/forgot-password", { email });
-      showDialog("OTP sent to your email. Please check your inbox.", true);
+      showDialog("OTP verification code sent to your email.", true);
       setStep("otp");
     } catch (err: any) {
-      showDialog(err.response?.data?.message || "Failed to send OTP. Check your email address.");
+      showDialog(err.response?.data?.message || "Failed to initiate password recovery.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Step 2: Verify OTP
   const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4) return;
     setLoading(true);
@@ -61,12 +66,13 @@ export default function EmployeeForgotPassword() {
       await API.post("/employee/verify-otp", { email, otp });
       setStep("newPassword");
     } catch (err: any) {
-      showDialog(err.response?.data?.message || "Invalid or expired OTP. Please try again.");
+      showDialog(err.response?.data?.message || "Verification code is invalid or expired.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Step 3: Reset Password
   const handleResetPassword = async () => {
     if (!newPassword || newPassword.length < 6) {
       showDialog("Password must be at least 6 characters.");
@@ -79,45 +85,52 @@ export default function EmployeeForgotPassword() {
     setLoading(true);
     try {
       await API.post("/employee/reset-password", { email, otp, newPassword });
-      showDialog("Password reset successfully! You can now login.", true);
+      showDialog("Password reset successful! You can now access your workspace.", true);
       setTimeout(() => router.replace("/employeeLogin"), 2000);
     } catch (err: any) {
-      showDialog(err.response?.data?.message || "Failed to reset password.");
+      showDialog(err.response?.data?.message || "Failed to update password.");
     } finally {
       setLoading(false);
     }
   };
 
   const stepTitles: Record<Step, string> = {
-    email: "Forgot Password",
-    otp: "Enter OTP",
-    newPassword: "Set New Password",
+    email: "Employee Recovery",
+    otp: "Verify Access",
+    newPassword: "New Credentials",
   };
 
   const stepSubtitles: Record<Step, string> = {
-    email: "Enter your employee email to receive an OTP",
-    otp: `OTP sent to ${email}. Enter the code below.`,
-    newPassword: "Create a strong new password for your account",
+    email: "Enter your workspace email to receive a recovery code",
+    otp: `Code sent to ${email}`,
+    newPassword: "Establish a secure new password for your employee account",
   };
 
   return (
     <View style={styles.outerContainer}>
       <ImageBackground
         source={require("../assets/images/auth_bg.png")}
-        style={styles.background}
+        style={[styles.background, { width, height }]}
         resizeMode="cover"
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.flex}
         >
-          <View style={styles.scrollContent}>
-            <View style={styles.glassWrapper}>
+          <ScrollView 
+            contentContainerStyle={[
+              styles.scrollContent, 
+              { paddingHorizontal: isDesktop ? width * 0.1 : 24 }
+            ]}
+            centerContent={true}
+          >
+            <View style={[styles.glassWrapper, { maxWidth: isDesktop ? 450 : isTablet ? 400 : '100%' }]}>
+              {/* Logo */}
               <View style={styles.logoSection}>
-                <Text variant="headlineSmall" style={styles.brandName}>CRM</Text>
+                <Text variant="displaySmall" style={styles.brandName}>CRM</Text>
               </View>
 
-              {/* Step Progress */}
+              {/* Step Progress Indicator */}
               <View style={styles.stepIndicator}>
                 {(["email", "otp", "newPassword"] as Step[]).map((s, i) => (
                   <View key={s} style={styles.stepRow}>
@@ -140,13 +153,13 @@ export default function EmployeeForgotPassword() {
 
               <Card style={styles.card} mode="elevated">
                 <Card.Content style={styles.cardContent}>
-                  <Text variant="titleMedium" style={styles.sectionTitle}>{stepTitles[step]}</Text>
-                  <Text variant="bodySmall" style={styles.subtitle}>{stepSubtitles[step]}</Text>
+                  <Text variant="titleLarge" style={styles.sectionTitle}>{stepTitles[step]}</Text>
+                  <Text variant="bodyMedium" style={styles.subtitle}>{stepSubtitles[step]}</Text>
 
                   {step === "email" && (
                     <>
                       <TextInput
-                        label="Employee Email"
+                        label="Work Email"
                         value={email}
                         onChangeText={setEmail}
                         mode="flat"
@@ -167,7 +180,7 @@ export default function EmployeeForgotPassword() {
                         buttonColor="#00796B"
                         textColor="white"
                       >
-                        Send OTP
+                        Send Code
                       </Button>
                     </>
                   )}
@@ -175,7 +188,7 @@ export default function EmployeeForgotPassword() {
                   {step === "otp" && (
                     <>
                       <TextInput
-                        label="One-Time Password (OTP)"
+                        label="6-Digit Verification Code"
                         value={otp}
                         onChangeText={setOtp}
                         mode="flat"
@@ -196,10 +209,10 @@ export default function EmployeeForgotPassword() {
                         buttonColor="#00796B"
                         textColor="white"
                       >
-                        Verify OTP
+                        Verify Code
                       </Button>
                       <TouchableOpacity onPress={handleRequestOtp} style={styles.resendRow}>
-                        <Text style={styles.resendLink}>Resend OTP</Text>
+                        <Text style={styles.resendLink}>Resend Recovery Code</Text>
                       </TouchableOpacity>
                     </>
                   )}
@@ -218,7 +231,7 @@ export default function EmployeeForgotPassword() {
                         textColor="#000"
                       />
                       <TextInput
-                        label="Confirm Password"
+                        label="Confirm New Password"
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
                         mode="flat"
@@ -238,14 +251,14 @@ export default function EmployeeForgotPassword() {
                         buttonColor="#00796B"
                         textColor="white"
                       >
-                        Reset Password
+                        Update Password
                       </Button>
                     </>
                   )}
 
                   <View style={styles.footer}>
                     <TouchableOpacity onPress={() => router.replace("/employeeLogin")}>
-                      <Text style={styles.link}>← Back to Employee Login</Text>
+                      <Text style={styles.link}>← Return to Sign In</Text>
                     </TouchableOpacity>
                   </View>
                 </Card.Content>
@@ -255,17 +268,17 @@ export default function EmployeeForgotPassword() {
             <Portal>
               <Dialog visible={dialogVisible} onDismiss={() => setDialogVisible(false)} style={styles.dialog}>
                 <Dialog.Title style={dialogSuccess ? styles.successTitle : styles.errorTitle}>
-                  {dialogSuccess ? "✓ Success" : "Notice"}
+                  {dialogSuccess ? "✓ Successful" : "Access Recovery"}
                 </Dialog.Title>
                 <Dialog.Content>
                   <Text variant="bodyMedium" style={styles.dialogMsg}>{dialogMsg}</Text>
                 </Dialog.Content>
                 <Dialog.Actions>
-                  <Button onPress={() => setDialogVisible(false)} textColor="#00796B">OK</Button>
+                  <Button onPress={() => setDialogVisible(false)} textColor="#00796B">DISMISS</Button>
                 </Dialog.Actions>
               </Dialog>
             </Portal>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </ImageBackground>
     </View>
@@ -274,115 +287,118 @@ export default function EmployeeForgotPassword() {
 
 const styles = StyleSheet.create({
   outerContainer: { flex: 1 },
-  background: { width, height },
+  background: { flex: 1 },
   flex: { flex: 1 },
   scrollContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
-    padding: 24,
+    paddingVertical: 40,
   },
   glassWrapper: {
     width: "100%",
-    maxWidth: 450,
     alignSelf: "center",
   },
   logoSection: {
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 32,
   },
   brandName: {
     color: "#fff",
-    fontWeight: "800",
-    letterSpacing: 2,
+    fontWeight: "900",
+    letterSpacing: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   stepIndicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 24,
+    marginBottom: 40,
   },
   stepRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   stepDot: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.5)",
+    borderColor: "rgba(255,255,255,0.4)",
   },
   stepDotActive: {
     backgroundColor: "#00796B",
     borderColor: "#fff",
   },
   stepDotDone: {
-    backgroundColor: "#1B5E20",
+    backgroundColor: "#00897B",
     borderColor: "#fff",
   },
   stepDotText: {
-    color: "rgba(255,255,255,0.7)",
-    fontWeight: "700",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    fontWeight: "800",
+    fontSize: 14,
   },
   stepDotTextActive: {
     color: "#fff",
   },
   stepLine: {
-    width: 40,
+    width: 50,
     height: 2,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(255,255,255,0.2)",
     marginHorizontal: 4,
   },
   stepLineDone: {
-    backgroundColor: "#1B5E20",
+    backgroundColor: "#00897B",
   },
   card: {
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.97)",
+    borderRadius: 32,
+    backgroundColor: "rgba(255,255,255,0.98)",
     ...Platform.select({
-      web: { boxShadow: "0px 10px 30px rgba(0,0,0,0.25)" },
+      web: { boxShadow: "0px 20px 40px rgba(0,0,0,0.25)" },
       default: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 12,
       },
     }),
   },
-  cardContent: { padding: 16 },
+  cardContent: { padding: 24 },
   sectionTitle: {
     textAlign: "center",
     color: "#004D40",
-    fontWeight: "700",
-    marginBottom: 6,
+    fontWeight: "800",
+    marginBottom: 12,
   },
   subtitle: {
     textAlign: "center",
     color: "#64748B",
-    marginBottom: 24,
-    lineHeight: 18,
+    marginBottom: 32,
+    lineHeight: 20,
+    fontSize: 14,
   },
   input: {
-    marginBottom: 16,
+    marginBottom: 24,
     backgroundColor: "transparent",
   },
   mainButton: {
     marginTop: 8,
-    borderRadius: 12,
-    paddingVertical: 4,
+    borderRadius: 14,
+    paddingVertical: 6,
   },
-  buttonLabel: { fontWeight: "700", letterSpacing: 1 },
-  resendRow: { alignItems: "center", marginTop: 12 },
-  resendLink: { color: "#00796B", fontWeight: "600", fontSize: 13 },
-  footer: { alignItems: "center", marginTop: 20 },
-  link: { color: "#00796B", fontWeight: "700", fontSize: 13 },
-  dialog: { borderRadius: 20, backgroundColor: "#fff" },
-  successTitle: { color: "#1B5E20", fontWeight: "bold" },
-  errorTitle: { color: "#D32F2F", fontWeight: "bold" },
-  dialogMsg: { color: "#444" },
+  buttonLabel: { fontWeight: "800", letterSpacing: 1.5, fontSize: 16 },
+  resendRow: { alignItems: "center", marginTop: 20 },
+  resendLink: { color: "#00796B", fontWeight: "700", fontSize: 14 },
+  footer: { alignItems: "center", marginTop: 32 },
+  link: { color: "#00796B", fontWeight: "800", fontSize: 14 },
+  dialog: { borderRadius: 28, backgroundColor: "#fff" },
+  successTitle: { color: "#1B5E20", fontWeight: "900" },
+  errorTitle: { color: "#D32F2F", fontWeight: "900" },
+  dialogMsg: { color: "#444", lineHeight: 22 },
 });

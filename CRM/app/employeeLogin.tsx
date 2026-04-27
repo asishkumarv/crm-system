@@ -5,16 +5,15 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ImageBackground, 
-  Image,
-  Dimensions,
-  TouchableOpacity
+  useWindowDimensions,
+  TouchableOpacity,
+  ScrollView
 } from "react-native";
 import { 
   TextInput, 
   Button, 
   Text, 
   Card, 
-  useTheme,
   Portal,
   Dialog
 } from "react-native-paper";
@@ -22,16 +21,17 @@ import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 import API from "../services/api";
 
-const { width, height } = Dimensions.get("window");
-
 export default function EmployeeLogin() {
   const { login: setAuth } = useAuth();
-  const theme = useTheme();
+  const { width, height } = useWindowDimensions();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [visible, setVisible] = useState(false);
+
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768 && width < 1024;
 
   const login = async () => {
     if (!email || !password) return;
@@ -55,23 +55,29 @@ export default function EmployeeLogin() {
     <View style={styles.outerContainer}>
       <ImageBackground 
         source={require("../assets/images/auth_bg.png")}
-        style={styles.background}
+        style={[styles.background, { width, height }]}
         resizeMode="cover"
       >
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.flex}
         >
-          <View style={styles.scrollContent}>
-            <View style={styles.glassWrapper}>
+          <ScrollView 
+            contentContainerStyle={[
+              styles.scrollContent, 
+              { paddingHorizontal: isDesktop ? width * 0.1 : 24 }
+            ]}
+            centerContent={true}
+          >
+            <View style={[styles.glassWrapper, { maxWidth: isDesktop ? 450 : isTablet ? 400 : '100%' }]}>
               <View style={styles.logoSection}>
-                <Text variant="headlineSmall" style={styles.brandName}>CRM</Text>
-                {/* <Text variant="bodyMedium" style={styles.brandTagline}>Employee Workspace Portal</Text> */}
+                <Text variant="displaySmall" style={styles.brandName}>CRM</Text>
+                <Text variant="bodyMedium" style={styles.brandTagline}>EMPLOYEE WORKSPACE</Text>
               </View>
 
               <Card style={styles.card} mode="elevated">
                 <Card.Content style={styles.cardContent}>
-                  <Text variant="titleMedium" style={styles.sectionTitle}>Employee Login</Text>
+                  <Text variant="titleLarge" style={styles.sectionTitle}>Employee Sign In</Text>
 
                   <TextInput
                     label="Employee Email"
@@ -119,7 +125,7 @@ export default function EmployeeLogin() {
                     <TouchableOpacity onPress={() => router.push("/employeeForgotPassword")}>
                       <Text style={styles.link}>Forgot Password?</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => router.push("/register")} style={{ marginTop: 12 }}>
+                    <TouchableOpacity onPress={() => router.push("/register")} style={{ marginTop: 16 }}>
                       <Text style={styles.link}>Request Access Privileges</Text>
                     </TouchableOpacity>
                   </View>
@@ -138,7 +144,7 @@ export default function EmployeeLogin() {
                 </Dialog.Actions>
               </Dialog>
             </Portal>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </ImageBackground>
     </View>
@@ -150,51 +156,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   background: {
-    width: width,
-    height: height,
+    flex: 1,
   },
   flex: {
     flex: 1,
   },
   scrollContent: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: "center",
-    padding: 24,
+    paddingVertical: 40,
   },
   glassWrapper: {
     width: '100%',
-    maxWidth: 450,
     alignSelf: 'center',
   },
   logoSection: {
     alignItems: "center",
-    marginBottom: 32,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 40,
   },
   brandName: {
     color: "#fff",
-    fontWeight: "800",
-    letterSpacing: 2,
+    fontWeight: "900",
+    letterSpacing: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   brandTagline: {
     color: "rgba(255,255,255,0.7)",
     fontSize: 12,
-    letterSpacing: 1.5,
-    marginTop: 4,
+    letterSpacing: 2,
+    marginTop: 8,
+    fontWeight: '700',
   },
-    card: {
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+  card: {
+    borderRadius: 28,
+    backgroundColor: "rgba(255, 255, 255, 0.98)",
     ...Platform.select({
       web: {
-        boxShadow: "0px 10px 20px rgba(0,0,0,0.2)",
+        boxShadow: "0px 20px 40px rgba(0,0,0,0.25)",
       },
       default: {
         shadowColor: "#000",
@@ -206,38 +206,39 @@ const styles = StyleSheet.create({
     })
   },
   cardContent: {
-    padding: 16,
+    padding: 24,
   },
   sectionTitle: {
     textAlign: "center",
     color: "#004D40",
-    fontWeight: "700",
-    marginBottom: 24,
+    fontWeight: "800",
+    marginBottom: 32,
   },
   input: {
-    marginBottom: 20,
+    marginBottom: 24,
     backgroundColor: "transparent",
   },
   mainButton: {
-    marginTop: 12,
-    borderRadius: 12,
-    paddingVertical: 4,
+    marginTop: 8,
+    borderRadius: 14,
+    paddingVertical: 6,
   },
   buttonLabel: {
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    fontSize: 16,
   },
   footer: {
     alignItems: "center",
-    marginTop: 24,
+    marginTop: 32,
   },
   link: {
     color: "#00796B",
     fontWeight: "700",
-    fontSize: 13,
+    fontSize: 14,
   },
   dialog: {
-    borderRadius: 20,
+    borderRadius: 24,
     backgroundColor: '#fff',
   },
   errorTitle: {
