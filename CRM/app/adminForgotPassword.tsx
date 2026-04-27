@@ -60,7 +60,7 @@ export default function AdminForgotPassword() {
     if (!otp || otp.length < 4) return;
     setLoading(true);
     try {
-      await API.post("/admin/verify-otp", { email, otp });
+      await API.post("/admin/verify-reset-otp", { email, otp });
       setStep("newPassword");
     } catch (err: any) {
       showDialog(err.response?.data?.message || "Invalid or expired OTP. Please try again.");
