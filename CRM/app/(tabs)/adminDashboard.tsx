@@ -17,7 +17,8 @@ import {
   Portal,
   Dialog,
   TextInput,
-  SegmentedButtons
+  SegmentedButtons,
+  Menu
 } from "react-native-paper";
 import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
@@ -76,6 +77,7 @@ export default function AdminDashboard() {
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
   const [downloadDialogVisible, setDownloadDialogVisible] = useState(false);
   const [downloadTarget, setDownloadTarget] = useState<string | null>(null);
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
   const [addLeadVisible, setAddLeadVisible] = useState(false);
   const [newLead, setNewLead] = useState({ name: "", phone: "", email: "", source: "Admin Added", query: "" });
 
@@ -95,8 +97,11 @@ export default function AdminDashboard() {
     const matchDate = leadFilters.date ? (l as any).created_at?.includes(leadFilters.date) : true;
     
     let matchAssignment = true;
-    if (leadFilters.assignment === 'assigned') matchAssignment = !!l.assigned_to;
-    if (leadFilters.assignment === 'unallocated') matchAssignment = !l.assigned_to;
+    const filterVal = leadFilters.assignment;
+    if (filterVal === 'assigned') matchAssignment = !!l.assigned_to;
+    if (filterVal === 'not assigned' || filterVal === 'unallocated') matchAssignment = !l.assigned_to;
+    if (filterVal === 'converted') matchAssignment = (l.status || '').toLowerCase() === 'converted';
+    if (filterVal === 'contacted') matchAssignment = (l.status || '').toLowerCase() === 'contacted';
 
     return matchName && matchSource && matchPhone && matchDate && matchAssignment;
   });
@@ -320,9 +325,20 @@ export default function AdminDashboard() {
     <View style={styles.outerContainer}>
       {!isDesktop && (
         <Appbar.Header style={styles.appbar} elevated>
+          <Menu
+            visible={mobileMenuVisible}
+            onDismiss={() => setMobileMenuVisible(false)}
+            anchor={<Appbar.Action icon="menu" onPress={() => setMobileMenuVisible(true)} color="#0EA5E9" />}
+          >
+            <Menu.Item onPress={() => { setViewMode('dashboard'); setMobileMenuVisible(false); }} title="Dashboard" leadingIcon="view-dashboard-outline" />
+            <Menu.Item onPress={() => { setViewMode('leads'); setMobileMenuVisible(false); }} title="Lead Management" leadingIcon="account-multiple-outline" />
+            <Menu.Item onPress={() => { setViewMode('import'); setMobileMenuVisible(false); }} title="Import Leads" leadingIcon="database-import" />
+            <Menu.Item onPress={() => { setViewMode('employees'); setMobileMenuVisible(false); }} title="Team Staff" leadingIcon="account-group" />
+            <Menu.Item onPress={() => { setViewMode('whatsapp'); setMobileMenuVisible(false); }} title="Messaging" leadingIcon="message-text-outline" />
+            <Divider />
+            <Menu.Item onPress={() => { setViewMode('settings'); setMobileMenuVisible(false); }} title="Settings" leadingIcon="cog-outline" />
+          </Menu>
           <Appbar.Content title="CRM Admin" titleStyle={styles.appbarTitle} />
-          <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/adminProfile")} color="#0EA5E9" />
-          <Appbar.Action icon="logout" onPress={logout} color="#0EA5E9" />
         </Appbar.Header>
       )}
 
@@ -332,8 +348,8 @@ export default function AdminDashboard() {
             <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 8}}>
               <Avatar.Icon size={40} icon="earth" style={{backgroundColor: '#3B82F6', marginRight: 12}} color="#FFF" />
               <View>
-                <Text style={{color: '#0F172A', fontSize: 20, fontWeight: '900', letterSpacing: 0.5}}>VisaCRM</Text>
-                <Text style={{color: '#64748B', fontSize: 10, fontWeight: '600'}}>Immigration Hub</Text>
+                <Text style={{color: '#0F172A', fontSize: 20, fontWeight: '900', letterSpacing: 0.5}}>CRM</Text>
+                <Text style={{color: '#64748B', fontSize: 10, fontWeight: '600'}}>System</Text>
               </View>
             </View>
 

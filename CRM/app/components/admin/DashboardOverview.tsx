@@ -35,7 +35,7 @@ export default function DashboardOverview({ leads, employees, openDownloadModal 
 
   return (
     <View style={{flex: 1}}>
-      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24}}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16}}>
         <View>
           <Text style={{fontSize: 24, fontWeight: '800', color: '#0F172A'}}>Dashboard Overview</Text>
           <Text style={{fontSize: 14, color: '#64748B', marginTop: 4}}>Welcome back! Here's what's happening with your leads.</Text>
@@ -82,28 +82,34 @@ export default function DashboardOverview({ leads, employees, openDownloadModal 
            <Text style={styles.chartTitle}>Leads by Source</Text>
            <View style={{height: 200, justifyContent: 'center'}}>
              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>DIRECT</Text>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['direct'] || 0}</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>INSTAGRAM</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['instagram'] || 0}</Text>
              </View>
-             <View style={{height: 8, backgroundColor: '#3B82F6', width: getSourceWidth('direct'), borderRadius: 4, marginBottom: 16}} />
+             <View style={{height: 8, backgroundColor: '#F59E0B', width: getSourceWidth('instagram'), borderRadius: 4, marginBottom: 12}} />
              
              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
                <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>FACEBOOK</Text>
                <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['facebook'] || 0}</Text>
              </View>
-             <View style={{height: 8, backgroundColor: '#A855F7', width: getSourceWidth('facebook'), borderRadius: 4, marginBottom: 16}} />
+             <View style={{height: 8, backgroundColor: '#3B82F6', width: getSourceWidth('facebook'), borderRadius: 4, marginBottom: 12}} />
              
              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>INSTAGRAM</Text>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['instagram'] || 0}</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>LINKEDIN</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['linkedin'] || 0}</Text>
              </View>
-             <View style={{height: 8, backgroundColor: '#F59E0B', width: getSourceWidth('instagram'), borderRadius: 4, marginBottom: 16}} />
+             <View style={{height: 8, backgroundColor: '#8B5CF6', width: getSourceWidth('linkedin'), borderRadius: 4, marginBottom: 12}} />
              
              <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>OTHER</Text>
-               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['other'] || 0}</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>EMPLOYEE ADDED</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['employee added'] || 0}</Text>
              </View>
-             <View style={{height: 8, backgroundColor: '#10B981', width: getSourceWidth('other'), borderRadius: 4, marginBottom: 16}} />
+             <View style={{height: 8, backgroundColor: '#10B981', width: getSourceWidth('employee added'), borderRadius: 4, marginBottom: 12}} />
+
+             <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>ADMIN ADDED</Text>
+               <Text style={{fontSize: 10, color:'#64748B', marginBottom:4}}>{sourceCount['admin added'] || 0}</Text>
+             </View>
+             <View style={{height: 8, backgroundColor: '#0EA5E9', width: getSourceWidth('admin added'), borderRadius: 4, marginBottom: 12}} />
            </View>
         </Surface>
         

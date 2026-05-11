@@ -5,7 +5,7 @@ import { Surface, Button, IconButton } from 'react-native-paper';
 export default function ImportLeads({ handleFileUpload }: any) {
   return (
     <View style={{flex: 1}}>
-      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32}}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16}}>
         <View>
           <Text style={{fontSize: 24, fontWeight: '800', color: '#0F172A'}}>Import Leads</Text>
           <Text style={{fontSize: 14, color: '#64748B', marginTop: 4}}>Choose your data source to begin</Text>

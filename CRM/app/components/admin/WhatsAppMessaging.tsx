@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { Surface, Button, TextInput, Avatar, IconButton } from 'react-native-paper';
 
 export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBulkEmail }: any) {
@@ -8,6 +8,8 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
   const [selected, setSelected] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
 
   const filtered = leads.filter((l: any) => l.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -34,7 +36,7 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
 
   return (
     <View style={{flex: 1}}>
-      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24}}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16}}>
         <View>
           <Text style={{fontSize: 24, fontWeight: '800', color: '#0F172A'}}>Messaging Hub</Text>
           <Text style={{fontSize: 14, color: '#64748B', marginTop: 4}}>Send bulk emails and WhatsApp messages</Text>
@@ -67,7 +69,7 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
          </Button>
       </View>
 
-      <View style={{flexDirection: 'row', gap: 24, flex: 1}}>
+      <View style={{flexDirection: isDesktop ? 'row' : 'column', gap: 24, flex: 1}}>
         <Surface style={styles.leftPane} elevation={1}>
           <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16}}>
             <Text style={{fontWeight: '700', color: '#0F172A'}}>Select Leads</Text>
@@ -107,14 +109,14 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
                  <Text style={{fontWeight: '700', color: '#0F172A', marginLeft: 8}}>Message Templates</Text>
               </View>
               <View style={{flexDirection: 'row', gap: 16}}>
-                 <View style={styles.templateCard}>
+                 <TouchableOpacity style={styles.templateCard} onPress={() => setMessage("Hello {name}! Thank you for your inquiry. Our team has received your information and will contact you shortly...")}>
                     <Text style={styles.templateTitle}>WELCOME MESSAGE</Text>
                     <Text style={styles.templateBody}>Hello {'{name}'}! Thank you for your inquiry. Our team has received your information and will contact you shortly...</Text>
-                 </View>
-                 <View style={styles.templateCard}>
+                 </TouchableOpacity>
+                 <TouchableOpacity style={styles.templateCard} onPress={() => setMessage("Hi {name}, this is a gentle reminder regarding your application. Please let us know if you need any assistance...")}>
                     <Text style={styles.templateTitle}>FOLLOW-UP REMINDER</Text>
                     <Text style={styles.templateBody}>Hi {'{name}'}, this is a gentle reminder regarding your application. Please let us know if you need any assistance...</Text>
-                 </View>
+                 </TouchableOpacity>
               </View>
            </Surface>
            <Surface style={styles.rightPaneBottom} elevation={1}>
@@ -132,6 +134,7 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
                    style={{backgroundColor: '#F8FAFC', marginBottom: 12}}
                    outlineColor="#E2E8F0"
                    activeOutlineColor="#3B82F6"
+                   textColor="#0F172A"
                 />
               )}
 
@@ -146,6 +149,7 @@ export default function WhatsAppMessaging({ leads, handleBulkWhatsApp, handleBul
                  style={{backgroundColor: '#F8FAFC', flex: 1}}
                  outlineColor="#E2E8F0"
                  activeOutlineColor={channel === 'whatsapp' ? "#25D366" : "#3B82F6"}
+                 textColor="#0F172A"
               />
               <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16}}>
                  <Text style={{fontSize: 12, color: '#64748B'}}>{selected.length} recipients targeted</Text>

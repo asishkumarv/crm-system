@@ -5,7 +5,7 @@ import { Surface, Button, Avatar, Chip, Card, IconButton } from 'react-native-pa
 export default function EmployeeMatrix({ employees, approve, fetchEmployeeDetails }: any) {
   return (
     <View style={{flex: 1}}>
-      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24}}>
+      <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16}}>
         <View>
           <Text style={{fontSize: 24, fontWeight: '800', color: '#0F172A'}}>Staff Matrix</Text>
           <Text style={{fontSize: 14, color: '#64748B', marginTop: 4}}>Manage team members and performance</Text>
@@ -50,7 +50,7 @@ export default function EmployeeMatrix({ employees, approve, fetchEmployeeDetail
 const styles = StyleSheet.create({
   countChip: { backgroundColor: 'rgba(14, 165, 233, 0.1)', borderWidth: 1, borderColor: 'rgba(14, 165, 233, 0.3)' },
   itemGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
-  employeeCardWrapper: { flex: 1, minWidth: 320, maxWidth: 450 },
+  employeeCardWrapper: { flex: 1, minWidth: 280, maxWidth: 450 },
   modernCard: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2 },
   modernCardContent: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   cardInfo: { flex: 1, marginLeft: 16 },
