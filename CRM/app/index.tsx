@@ -1,33 +1,48 @@
 import React from "react";
-import { 
-  View, 
-  StyleSheet, 
-  ImageBackground, 
-  useWindowDimensions, 
+import {
+  View,
+  StyleSheet,
+  useWindowDimensions,
   TouchableOpacity,
   Platform,
-  ScrollView
+  ScrollView,
 } from "react-native";
-import { Text, Card, ActivityIndicator, IconButton } from "react-native-paper";
+
+import {
+  Text,
+  Card,
+  ActivityIndicator,
+  IconButton,
+} from "react-native-paper";
+
 import { router, Redirect } from "expo-router";
 import { useAuth } from "../context/AuthContext";
 
 export default function LandingPage() {
   const { user, token, isLoading } = useAuth();
-  const { width, height } = useWindowDimensions();
+
+  const { width } = useWindowDimensions();
 
   const isDesktop = width >= 1024;
   const isTablet = width >= 768 && width < 1024;
 
   if (!isLoading && token && user) {
-    if (user.role === 'admin') return <Redirect href="/(tabs)/adminDashboard" />;
-    if (user.role === 'employee') return <Redirect href="/(tabs)/employeeDashboard" />;
+    if (user.role === "admin") {
+      return <Redirect href="/(tabs)/adminDashboard" />;
+    }
+
+    if (user.role === "employee") {
+      return <Redirect href="/(tabs)/employeeDashboard" />;
+    }
   }
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1A237E" />
+        <ActivityIndicator
+          size="large"
+          color="#22D3EE"
+        />
       </View>
     );
   }
@@ -35,220 +50,358 @@ export default function LandingPage() {
   const options = [
     {
       title: "New Registration",
-      subtitle: "Establish your corporate profile and join the CRM ecosystem.",
+      subtitle:
+        "Establish your corporate profile and join the CRM ecosystem.",
       icon: "account-plus-outline",
       route: "/register",
-      color: "#1565C0",
+      color: "#22D3EE",
     },
+
     {
       title: "Admin Portal",
-      subtitle: "Secure access for system administrators and managers.",
+      subtitle:
+        "Secure access for system administrators and managers.",
       icon: "shield-account-outline",
       route: "/adminLogin",
-      color: "#1A237E",
+      color: "#A855F7",
     },
+
     {
       title: "Employee Hub",
-      subtitle: "Dedicated workspace for lead processing and operations.",
+      subtitle:
+        "Dedicated workspace for lead processing and operations.",
       icon: "briefcase-variant-outline",
       route: "/employeeLogin",
-      color: "#00796B",
+      color: "#06B6D4",
     },
+
     {
       title: "Public Inquiry",
-      subtitle: "Submit your service request and get a premium consultation.",
+      subtitle:
+        "Submit your service request and get a premium consultation.",
       icon: "message-draw",
       route: "/public-form",
-      color: "#D81B60",
-    }
+      color: "#F43F5E",
+    },
   ];
 
   return (
-    <ImageBackground 
-      source={require("../assets/images/auth_bg.png")}
-      style={[styles.background, { width, height }]}
-      resizeMode="cover"
-    >
-      <View style={styles.overlay}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Text variant="displayMedium" style={styles.brandName}>CRM</Text>
-            <View style={styles.underline} />
-            <Text variant="headlineSmall" style={styles.tagline}>
-              Enterprise Resource Intelligence
-            </Text>
-            <Text variant="bodyLarge" style={styles.description}>
-              Seamless management for modern business ecosystems. Select a portal to begin.
-            </Text>
-          </View>
-
-          <View style={[
-            styles.optionsContainer, 
-            (isDesktop || isTablet) && styles.optionsGrid,
-            { maxWidth: isDesktop ? 1000 : 600 }
-          ]}>
-            {options.map((option, index) => (
-              <TouchableOpacity 
-                key={index} 
-                onPress={() => router.push(option.route as any)}
-                activeOpacity={0.8}
-                style={[
-                  styles.cardWrapper,
-                  (isDesktop || isTablet) && styles.gridCardWrapper
-                ]}
-              >
-                <Card style={styles.card} mode="elevated">
-                  <Card.Content style={styles.cardContent}>
-                    <View style={[styles.iconCircle, { backgroundColor: option.color + '15' }]}>
-                      <IconButton 
-                        icon={option.icon} 
-                        size={36} 
-                        iconColor={option.color} 
-                      />
-                    </View>
-                    <View style={styles.textSection}>
-                      <Text variant="titleLarge" style={[styles.optionTitle, { color: option.color }]}>
-                        {option.title}
-                      </Text>
-                      <Text variant="bodyMedium" style={styles.optionSubtitle}>
-                        {option.subtitle}
-                      </Text>
-                    </View>
-                    <IconButton icon="chevron-right" iconColor="#ccc" size={24} />
-                  </Card.Content>
-                </Card>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.versionText}>System Version 2.4.0 • Secured by Enterprise SSL</Text>
-          </View>
-        </ScrollView>
+    <View style={styles.container}>
+      {/* BACKGROUND */}
+      <View style={styles.background}>
+        <View style={styles.leftGlow} />
+        <View style={styles.rightGlow} />
+        <View style={styles.centerGlow} />
       </View>
-    </ImageBackground>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.brandName}>CRM</Text>
+
+          <View style={styles.underline} />
+
+          <Text style={styles.tagline}>
+            Enterprise Resource Intelligence
+          </Text>
+
+          <Text style={styles.description}>
+            Seamless management for modern business
+            ecosystems. Select a portal to begin.
+          </Text>
+        </View>
+
+        {/* CARDS */}
+        <View
+          style={[
+            styles.optionsContainer,
+
+            (isDesktop || isTablet) &&
+              styles.optionsGrid,
+
+            {
+              maxWidth: isDesktop ? 1050 : 650,
+            },
+          ]}
+        >
+          {options.map((option, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() =>
+                router.push(option.route as any)
+              }
+              activeOpacity={0.85}
+              style={[
+                styles.cardWrapper,
+
+                (isDesktop || isTablet) &&
+                  styles.gridCardWrapper,
+              ]}
+            >
+              <Card style={styles.card} mode="elevated">
+                <Card.Content style={styles.cardContent}>
+                  {/* ICON */}
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      {
+                        backgroundColor:
+                          option.color + "15",
+                      },
+                    ]}
+                  >
+                    <IconButton
+                      icon={option.icon}
+                      size={36}
+                      iconColor={option.color}
+                    />
+                  </View>
+
+                  {/* TEXT */}
+                  <View style={styles.textSection}>
+                    <Text
+                      style={[
+                        styles.optionTitle,
+                        {
+                          color: option.color,
+                        },
+                      ]}
+                    >
+                      {option.title}
+                    </Text>
+
+                    <Text style={styles.optionSubtitle}>
+                      {option.subtitle}
+                    </Text>
+                  </View>
+
+                  {/* ARROW */}
+                  <IconButton
+                    icon="chevron-right"
+                    iconColor="rgba(255,255,255,0.45)"
+                    size={24}
+                  />
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* FOOTER */}
+        <View style={styles.footer}>
+          <Text style={styles.versionText}>
+            System Version 2.4.0 • Secured by
+            Enterprise SSL
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#020617",
+  },
+
   background: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#020617",
+    overflow: "hidden",
   },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(26, 35, 126, 0.45)',
+
+  leftGlow: {
+    position: "absolute",
+    width: 350,
+    height: 350,
+    borderRadius: 350,
+    backgroundColor: "rgba(34,211,238,0.18)",
+    left: -100,
+    top: 80,
+
+    ...Platform.select({
+      web: {
+        filter: "blur(90px)",
+      },
+    }),
   },
+
+  rightGlow: {
+    position: "absolute",
+    width: 350,
+    height: 350,
+    borderRadius: 350,
+    backgroundColor: "rgba(236,72,153,0.18)",
+    right: -120,
+    bottom: 60,
+
+    ...Platform.select({
+      web: {
+        filter: "blur(100px)",
+      },
+    }),
+  },
+
+  centerGlow: {
+    position: "absolute",
+    width: 600,
+    height: 600,
+    borderRadius: 600,
+    backgroundColor: "rgba(99,102,241,0.08)",
+    alignSelf: "center",
+    top: 180,
+
+    ...Platform.select({
+      web: {
+        filter: "blur(140px)",
+      },
+    }),
+  },
+
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#020617",
   },
+
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
     paddingVertical: 60,
   },
+
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 60,
   },
+
   brandName: {
-    color: "#fff",
+    color: "#ffffff",
+    fontSize: 64,
     fontWeight: "900",
-    letterSpacing: 6,
-    textShadowColor: 'rgba(0, 0, 0, 0.4)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
+    letterSpacing: 8,
   },
+
   underline: {
-    width: 80,
+    width: 90,
     height: 4,
-    backgroundColor: '#fff',
-    borderRadius: 2,
-    marginVertical: 16,
+    borderRadius: 30,
+    backgroundColor: "#22D3EE",
+    marginVertical: 18,
   },
+
   tagline: {
-    color: "#fff",
+    color: "#ffffff",
     letterSpacing: 2,
-    textAlign: 'center',
-    fontWeight: '300',
-    marginBottom: 8,
+    textAlign: "center",
+    fontWeight: "300",
+    marginBottom: 10,
+    fontSize: 26,
   },
+
   description: {
-    color: "rgba(255,255,255,0.7)",
-    textAlign: 'center',
-    maxWidth: 500,
+    color: "rgba(255,255,255,0.68)",
+    textAlign: "center",
+    maxWidth: 560,
     marginTop: 8,
+    fontSize: 16,
+    lineHeight: 24,
   },
+
   optionsContainer: {
-    width: '100%',
-    alignSelf: 'center',
-    gap: 20,
+    width: "100%",
+    alignSelf: "center",
+    gap: 22,
   },
+
   optionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
   },
+
   cardWrapper: {
-    width: '100%',
+    width: "100%",
   },
+
   gridCardWrapper: {
-    width: '48%',
-    minWidth: 300,
+    width: "48%",
+    minWidth: 320,
   },
+
   card: {
-    borderRadius: 32,
-    backgroundColor: "rgba(255, 255, 255, 0.98)",
+    borderRadius: 34,
+    overflow: "hidden",
+    backgroundColor: "rgba(15, 23, 42, 0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+
     ...Platform.select({
       web: {
-        boxShadow: "0px 15px 35px rgba(0,0,0,0.2)",
+        backdropFilter: "blur(18px)",
+        boxShadow:
+          "0px 0px 60px rgba(0,0,0,0.45)",
       },
+
       default: {
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 20,
-        elevation: 10,
-      }
+        shadowOffset: {
+          width: 0,
+          height: 12,
+        },
+        shadowOpacity: 0.4,
+        shadowRadius: 25,
+        elevation: 15,
+      },
     }),
   },
+
   cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 24,
   },
+
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    justifyContent: "center",
+    alignItems: "center",
   },
+
   textSection: {
     flex: 1,
     marginLeft: 20,
   },
+
   optionTitle: {
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 0.5,
+    fontSize: 22,
   },
+
   optionSubtitle: {
-    color: '#555',
-    marginTop: 6,
-    lineHeight: 20,
+    color: "rgba(255,255,255,0.62)",
+    marginTop: 8,
+    lineHeight: 22,
     fontSize: 14,
   },
+
   footer: {
     marginTop: 80,
-    alignItems: 'center',
+    alignItems: "center",
   },
+
   versionText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: "rgba(255,255,255,0.4)",
     letterSpacing: 1.5,
     fontSize: 12,
-    fontWeight: '600',
-  }
+    fontWeight: "600",
+  },
 });
