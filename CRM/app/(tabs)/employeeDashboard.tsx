@@ -132,7 +132,7 @@ export default function EmployeeDashboard() {
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#00f3ff" />
+        <ActivityIndicator size="large" color="#0EA5E9" />
         <Text style={styles.loadingText}>Syncing Workspace...</Text>
       </View>
     );
@@ -143,8 +143,8 @@ export default function EmployeeDashboard() {
       {!isDesktop && (
         <Appbar.Header style={styles.appbar} elevated>
           <Appbar.Content title="CRM Portal" titleStyle={styles.appbarTitle} />
-          <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/employeeProfile")} color="#00f3ff" />
-          <Appbar.Action icon="logout" onPress={logout} color="#00f3ff" />
+          <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/employeeProfile")} color="#0EA5E9" />
+          <Appbar.Action icon="logout" onPress={logout} color="#0EA5E9" />
         </Appbar.Header>
       )}
 
@@ -155,14 +155,14 @@ export default function EmployeeDashboard() {
             <Divider style={styles.sidebarDivider} />
             <List.Item 
               title="Portfolio" 
-              left={() => <List.Icon icon="briefcase-outline" color="#00f3ff" />} 
+              left={() => <List.Icon icon="briefcase-outline" color="#0EA5E9" />} 
               titleStyle={styles.sidebarItemText} 
             />
             <View style={{ flex: 1 }} />
             <List.Item 
               title="Profile" 
-              left={() => <List.Icon icon="account-circle-outline" color="#94A3B8" />} 
-              titleStyle={{ color: '#94A3B8' }} 
+              left={() => <List.Icon icon="account-circle-outline" color="#64748B" />} 
+              titleStyle={{ color: '#64748B' }} 
               onPress={() => router.push("/(tabs)/employeeProfile")}
             />
             <List.Item 
@@ -177,7 +177,7 @@ export default function EmployeeDashboard() {
         <ScrollView 
           style={styles.container}
           contentContainerStyle={[styles.scrollContent, isDesktop && { paddingLeft: 16 }]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00f3ff" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EA5E9" />}
         >
           <View style={styles.responsiveWrapper}>
           
@@ -189,17 +189,17 @@ export default function EmployeeDashboard() {
             </View>
             
             <View style={styles.statsGrid}>
-              <Surface style={[styles.statBox, { shadowColor: '#00f3ff' }]} elevation={2}>
-                <Text variant="displaySmall" style={[styles.statValue, { color: '#00f3ff' }]}>{leads.length}</Text>
+              <Surface style={[styles.statBox, { shadowColor: '#000' }]} elevation={2}>
+                <Text variant="displaySmall" style={[styles.statValue, { color: '#0EA5E9' }]}>{leads.length}</Text>
                 <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
               </Surface>
-              <Surface style={[styles.statBox, { shadowColor: '#b537f2' }]} elevation={2}>
+              <Surface style={[styles.statBox, { shadowColor: '#000' }]} elevation={2}>
                 <Text variant="displaySmall" style={[styles.statValue, { color: '#b537f2' }]}>
                   {leads.filter(l => l.status === 'contacted').length}
                 </Text>
                 <Text variant="labelMedium" style={styles.statLabel}>CONTACTED</Text>
               </Surface>
-              <Surface style={[styles.statBox, { shadowColor: '#00E676' }]} elevation={2}>
+              <Surface style={[styles.statBox, { shadowColor: '#000' }]} elevation={2}>
                 <Text variant="displaySmall" style={[styles.statValue, { color: '#00E676' }]}>
                   {leads.filter(l => l.status === 'converted').length}
                 </Text>
@@ -213,17 +213,17 @@ export default function EmployeeDashboard() {
           <View style={styles.listHeader}>
             <Text variant="titleLarge" style={styles.sectionTitle}>Active Nodes</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Button icon="account-plus" mode="contained" onPress={() => setAddLeadVisible(true)} buttonColor="rgba(0, 243, 255, 0.15)" textColor="#00f3ff" style={{marginRight: 8, borderColor: '#00f3ff', borderWidth: 1}}>Add</Button>
-              <IconButton icon="filter-variant" size={20} iconColor="#00f3ff" />
+              <Button icon="account-plus" mode="contained" onPress={() => setAddLeadVisible(true)} buttonColor="rgba(14, 165, 233, 0.15)" textColor="#0EA5E9" style={{marginRight: 8, borderColor: '#0EA5E9', borderWidth: 1}}>Add</Button>
+              <IconButton icon="filter-variant" size={20} iconColor="#0EA5E9" />
             </View>
           </View>
 
           {leads.length === 0 ? (
             <Surface style={styles.emptySurface} elevation={1}>
-              <IconButton icon="server-network-off" size={60} iconColor="rgba(0, 243, 255, 0.2)" />
+              <IconButton icon="server-network-off" size={60} iconColor="rgba(14, 165, 233, 0.2)" />
               <Text variant="titleMedium" style={styles.emptyTitle}>No connections established</Text>
               <Text variant="bodyMedium" style={styles.emptyText}>Pull to refresh or contact CRM admin for allocation.</Text>
-              <Button mode="contained" onPress={onRefresh} style={styles.refreshBtn} buttonColor="rgba(0, 243, 255, 0.2)" textColor="#00f3ff">Re-sync</Button>
+              <Button mode="contained" onPress={onRefresh} style={styles.refreshBtn} buttonColor="rgba(14, 165, 233, 0.2)" textColor="#0EA5E9">Re-sync</Button>
             </Surface>
           ) : (
             <View style={styles.leadGrid}>
@@ -330,9 +330,10 @@ export default function EmployeeDashboard() {
               multiline
               numberOfLines={4}
               style={styles.dialogInput}
-              outlineColor="#E2E8F0"
-              activeOutlineColor="#1A237E"
-              textColor="#000"
+              outlineColor="#CBD5E1"
+              activeOutlineColor="#0EA5E9"
+              textColor="#0F172A"
+              theme={{ colors: { background: '#F8FAFC', primary: '#0EA5E9', onSurfaceVariant: '#64748B' } }}
             />
             <View style={styles.inputFooter}>
                <Text style={[styles.charCount, note.length < 5 && {color: '#D32F2F'}]}>
@@ -356,17 +357,17 @@ export default function EmployeeDashboard() {
           </Dialog.Actions>
         </Dialog>
 
-        <Dialog visible={addLeadVisible} onDismiss={() => setAddLeadVisible(false)} style={[styles.dialog, { backgroundColor: '#0B1120', borderWidth: 1, borderColor: 'rgba(0, 243, 255, 0.2)' }]}>
-          <Dialog.Title style={[styles.dialogTitle, { color: '#00f3ff' }]}>Add Personal Lead</Dialog.Title>
+        <Dialog visible={addLeadVisible} onDismiss={() => setAddLeadVisible(false)} style={[styles.dialog, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(14, 165, 233, 0.2)' }]}>
+          <Dialog.Title style={[styles.dialogTitle, { color: '#0EA5E9' }]}>Add Personal Lead</Dialog.Title>
           <Dialog.Content>
-            <TextInput label="Name" value={newLead.name} onChangeText={t => setNewLead({...newLead, name: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} />
-            <TextInput label="Phone" value={newLead.phone} onChangeText={t => setNewLead({...newLead, phone: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} keyboardType="phone-pad" />
-            <TextInput label="Email (Optional)" value={newLead.email} onChangeText={t => setNewLead({...newLead, email: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} keyboardType="email-address" />
-            <TextInput label="Query/Purpose" value={newLead.query} onChangeText={t => setNewLead({...newLead, query: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} multiline numberOfLines={3} />
+            <TextInput label="Name" value={newLead.name} onChangeText={t => setNewLead({...newLead, name: t})} mode="outlined" style={styles.dialogInput} textColor="#0F172A" theme={{colors: {background: '#F0F9FF', primary: '#0EA5E9', onSurfaceVariant: '#64748B'}}} />
+            <TextInput label="Phone" value={newLead.phone} onChangeText={t => setNewLead({...newLead, phone: t})} mode="outlined" style={styles.dialogInput} textColor="#0F172A" theme={{colors: {background: '#F0F9FF', primary: '#0EA5E9', onSurfaceVariant: '#64748B'}}} keyboardType="phone-pad" />
+            <TextInput label="Email (Optional)" value={newLead.email} onChangeText={t => setNewLead({...newLead, email: t})} mode="outlined" style={styles.dialogInput} textColor="#0F172A" theme={{colors: {background: '#F0F9FF', primary: '#0EA5E9', onSurfaceVariant: '#64748B'}}} keyboardType="email-address" />
+            <TextInput label="Query/Purpose" value={newLead.query} onChangeText={t => setNewLead({...newLead, query: t})} mode="outlined" style={styles.dialogInput} textColor="#0F172A" theme={{colors: {background: '#F0F9FF', primary: '#0EA5E9', onSurfaceVariant: '#64748B'}}} multiline numberOfLines={3} />
           </Dialog.Content>
           <Dialog.Actions>
             <Button onPress={() => setAddLeadVisible(false)} textColor="#64748B">Cancel</Button>
-            <Button onPress={handleAddLead} buttonColor="#00f3ff" textColor="#050914" mode="contained" style={{ borderRadius: 8 }}>Save & Assign</Button>
+            <Button onPress={handleAddLead} buttonColor="#0EA5E9" textColor="#F0F9FF" mode="contained" style={{ borderRadius: 8 }}>Save & Assign</Button>
           </Dialog.Actions>
         </Dialog>
       </Portal>
@@ -374,7 +375,7 @@ export default function EmployeeDashboard() {
       <FAB
         icon="plus"
         style={styles.fab}
-        color="#050914"
+        color="#F0F9FF"
         label="Log Interaction"
         onPress={() => console.log('Log Interaction')}
       />
@@ -385,7 +386,7 @@ export default function EmployeeDashboard() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#050914',
+    backgroundColor: '#F0F9FF',
   },
   layoutContainer: {
     flex: 1,
@@ -393,29 +394,29 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 260,
-    backgroundColor: '#0B1120',
+    backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(0, 243, 255, 0.2)',
+    borderRightColor: 'rgba(14, 165, 233, 0.2)',
     paddingTop: 32,
     paddingHorizontal: 16,
   },
   sidebarTitle: {
-    color: '#00f3ff',
+    color: '#0EA5E9',
     fontSize: 24,
     fontWeight: '900',
     letterSpacing: 4,
     textAlign: 'center',
     marginBottom: 16,
-    textShadowColor: 'rgba(0, 243, 255, 0.5)',
+    textShadowColor: 'rgba(14, 165, 233, 0.5)',
     textShadowOffset: {width: 0, height: 0},
     textShadowRadius: 10,
   },
   sidebarDivider: {
-    backgroundColor: 'rgba(0, 243, 255, 0.2)',
+    backgroundColor: 'rgba(14, 165, 233, 0.2)',
     marginBottom: 16,
   },
   sidebarItemText: {
-    color: '#E2E8F0',
+    color: '#0F172A',
     fontWeight: '600',
   },
   container: {
@@ -432,18 +433,18 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   appbar: {
-    backgroundColor: '#0B1120',
+    backgroundColor: '#FFFFFF',
     elevation: 4,
-    shadowColor: '#00f3ff',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 243, 255, 0.1)',
+    borderBottomColor: 'rgba(14, 165, 233, 0.1)',
   },
   appbarTitle: {
     fontWeight: '900',
-    color: '#00f3ff',
+    color: '#0EA5E9',
     letterSpacing: 1,
   },
   heroSection: {
@@ -454,10 +455,10 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontWeight: '900',
-    color: '#E2E8F0',
+    color: '#0F172A',
   },
   heroSubtitle: {
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 4,
   },
   statsGrid: {
@@ -470,11 +471,11 @@ const styles = StyleSheet.create({
     minWidth: 140,
     padding: 24,
     borderRadius: 24,
-    backgroundColor: 'rgba(16, 24, 48, 0.7)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 243, 255, 0.1)',
-    shadowColor: '#00f3ff',
+    borderColor: 'rgba(14, 165, 233, 0.1)',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -482,10 +483,10 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontWeight: '900',
-    color: '#E2E8F0',
+    color: '#0F172A',
   },
   statLabel: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '700',
     fontSize: 10,
     letterSpacing: 1,
@@ -493,7 +494,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 24,
-    backgroundColor: 'rgba(0, 243, 255, 0.2)',
+    backgroundColor: 'rgba(14, 165, 233, 0.2)',
   },
   listHeader: {
     flexDirection: 'row',
@@ -503,7 +504,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '800',
-    color: '#E2E8F0',
+    color: '#0F172A',
   },
   leadGrid: {
     flexDirection: 'row',
@@ -513,14 +514,14 @@ const styles = StyleSheet.create({
   leadCard: {
     flex: 1,
     minWidth: 300,
-    backgroundColor: 'rgba(16, 24, 48, 0.7)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0, 243, 255, 0.1)',
-    shadowColor: '#00f3ff',
+    borderColor: 'rgba(14, 165, 233, 0.1)',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 4,
   },
@@ -529,7 +530,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    backgroundColor: 'rgba(0, 243, 255, 0.2)',
+    backgroundColor: 'rgba(14, 165, 233, 0.2)',
   },
   leadInfo: {
     flex: 1,
@@ -537,35 +538,35 @@ const styles = StyleSheet.create({
   },
   leadName: {
     fontWeight: '800',
-    color: '#E2E8F0',
+    color: '#0F172A',
   },
   leadPhone: {
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   leadEmail: {
-    color: '#94A3B8',
+    color: '#64748B',
     fontSize: 12,
   },
   leadQuery: {
-    color: '#E2E8F0',
+    color: '#0F172A',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
   },
   leadSource: {
-    color: '#00f3ff',
+    color: '#0EA5E9',
     fontSize: 11,
     fontStyle: 'italic',
   },
   statusChip: {
-    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(0, 243, 255, 0.3)',
+    borderColor: 'rgba(14, 165, 233, 0.3)',
     height: 24,
   },
   statusText: {
-    color: '#00f3ff',
+    color: '#0EA5E9',
     fontSize: 10,
     fontWeight: '700',
   },
@@ -590,19 +591,19 @@ const styles = StyleSheet.create({
   emptySurface: {
     padding: 48,
     borderRadius: 32,
-    backgroundColor: 'rgba(16, 24, 48, 0.7)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     marginTop: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0, 243, 255, 0.1)',
+    borderColor: 'rgba(14, 165, 233, 0.1)',
   },
   emptyTitle: {
     fontWeight: '800',
-    color: '#E2E8F0',
+    color: '#0F172A',
     marginTop: 16,
   },
   emptyText: {
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -616,25 +617,28 @@ const styles = StyleSheet.create({
     margin: 24,
     right: 0,
     bottom: 0,
-    backgroundColor: '#00f3ff',
+    backgroundColor: '#0EA5E9',
     borderRadius: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#050914',
+    backgroundColor: '#F0F9FF',
   },
   loadingText: {
     marginTop: 16,
     fontWeight: '600',
-    color: '#00f3ff',
+    color: '#0EA5E9',
   },
   dialog: {
+    width: '90%',
+    maxWidth: 500,
+    alignSelf: 'center',
     borderRadius: 24,
-    backgroundColor: '#0B1120',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0, 243, 255, 0.2)',
+    borderColor: 'rgba(14, 165, 233, 0.2)',
   },
   interactionDialog: {
     maxWidth: 500,
@@ -649,15 +653,16 @@ const styles = StyleSheet.create({
   },
   dialogTitle: {
     fontWeight: '800',
-    color: '#00f3ff',
+    color: '#0EA5E9',
     marginLeft: -8,
   },
   dialogSubtitle: {
-    color: '#94A3B8',
+    color: '#64748B',
     marginBottom: 16,
   },
   dialogInput: {
-    backgroundColor: 'rgba(16, 24, 48, 0.5)',
+    backgroundColor: '#F8FAFC',
+    marginBottom: 8,
   },
   inputFooter: {
     marginTop: 4,
