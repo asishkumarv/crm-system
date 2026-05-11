@@ -186,7 +186,7 @@ exports.sendBulkWhatsApp = async (req, res) => {
         // Robust phone formatting: ensure it starts with whatsapp:+ and has a + sign
         let cleanPhone = phone.trim();
         if (!cleanPhone.startsWith("+")) {
-          cleanPhone = "+" + cleanPhone;
+          cleanPhone = "+91" + cleanPhone;
         }
         const formattedPhone = `whatsapp:${cleanPhone}`;
         
