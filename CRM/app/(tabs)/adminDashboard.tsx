@@ -167,8 +167,8 @@ export default function AdminDashboard() {
       });
       alert("Broadcast successful");
       setBulkEmailVisible(false);
-    } catch (err) {
-      alert("Failed to send broadcast");
+    } catch (err: any) {
+      alert(err.response?.data || "Failed to send broadcast");
     }
   };
 

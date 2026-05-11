@@ -102,8 +102,12 @@ exports.sendBulkEmail = async (req, res) => {
 
     res.send(`Email sent to ${emails.length} leads`);
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error sending bulk emails");
+    console.error("Nodemailer Error:", err);
+    if (err.code === 'EAUTH' || err.message.includes('Missing credentials')) {
+      res.status(500).send("Email authentication failed. Please check EMAIL_USER and EMAIL_PASS (App Password) in your Render environment variables.");
+    } else {
+      res.status(500).send("Error sending bulk emails: " + err.message);
+    }
   }
 };
 
