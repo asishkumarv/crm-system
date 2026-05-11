@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl, Dimensions, Platform, useWindowDimensions } from "react-native";
 import { TouchableOpacity } from "react-native";
 import { 
   Text, 
@@ -51,6 +51,8 @@ export default function AdminDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
 
   // Modal States
   const [viewMode, setViewMode] = useState<'employees' | 'leads'>('employees');
@@ -65,6 +67,10 @@ export default function AdminDashboard() {
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
   const [activeEmployeeData, setActiveEmployeeData] = useState<Lead[]>([]);
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const [downloadDialogVisible, setDownloadDialogVisible] = useState(false);
+  const [downloadTarget, setDownloadTarget] = useState<string | null>(null);
+  const [addLeadVisible, setAddLeadVisible] = useState(false);
+  const [newLead, setNewLead] = useState({ name: "", phone: "", email: "", source: "Admin Added", query: "" });
 
   // Filter States
   const [leadFilters, setLeadFilters] = useState({
@@ -213,101 +219,237 @@ export default function AdminDashboard() {
     });
   };
 
+  const handleAddLead = async () => {
+    if (!newLead.name || !newLead.phone) return alert("Name and phone are required.");
+    try {
+      await API.post("/leads", newLead);
+      alert("Lead added successfully!");
+      setAddLeadVisible(false);
+      setNewLead({ name: "", phone: "", email: "", source: "Admin Added", query: "" });
+      fetchData();
+    } catch(err) {
+      alert("Failed to add lead.");
+    }
+  };
+
+  const openDownloadModal = (target: string) => {
+    setDownloadTarget(target);
+    setDownloadDialogVisible(true);
+  };
+
+  const handleDownload = (format: 'excel' | 'pdf') => {
+    if (!downloadTarget) return;
+    
+    let dataToDownload: any[] = [];
+    let title = "Data";
+
+    if (downloadTarget === 'staff') {
+      dataToDownload = employees.map(e => ({ ID: e.id, Name: e.name, Email: e.email, Status: e.status, Contacted: e.contacted_count || 0, Converted: e.converted_count || 0 }));
+      title = "Staff_List";
+    } else if (downloadTarget === 'leads') {
+      dataToDownload = leads.map(l => ({ ID: l.id, Name: l.name, Phone: l.phone, Email: l.email || '', Status: l.status || 'new', Assigned: l.assigned_to ? 'Yes' : 'No' }));
+      title = "All_Leads";
+    } else if (downloadTarget === 'unallocated') {
+      dataToDownload = leads.filter(l => !l.assigned_to).map(l => ({ ID: l.id, Name: l.name, Phone: l.phone, Email: l.email || '' }));
+      title = "Unallocated_Leads";
+    } else if (downloadTarget === 'contacted') {
+      dataToDownload = employees.map(e => ({ Name: e.name, Contacted_Count: e.contacted_count || 0 }));
+      title = "Contacted_Stats";
+    } else if (downloadTarget === 'converted') {
+      dataToDownload = employees.map(e => ({ Name: e.name, Converted_Count: e.converted_count || 0 }));
+      title = "Converted_Stats";
+    }
+
+    if (format === 'excel') {
+      if (Platform.OS === 'web') {
+        const headers = Object.keys(dataToDownload[0] || {}).join(",");
+        const csvRows = dataToDownload.map(row => Object.values(row).map(v => `"${v}"`).join(","));
+        const csvString = [headers, ...csvRows].join("\n");
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${title}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        alert("Download as Excel available on Web platform.");
+      }
+    } else if (format === 'pdf') {
+      if (Platform.OS === 'web') {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          let html = `<html><head><title>${title}</title><style>table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } body{font-family: sans-serif;}</style></head><body><h2>${title.replace('_', ' ')}</h2><table>`;
+          if (dataToDownload.length > 0) {
+            html += `<tr>${Object.keys(dataToDownload[0]).map(k => `<th>${k}</th>`).join('')}</tr>`;
+            dataToDownload.forEach(row => {
+              html += `<tr>${Object.values(row).map(v => `<td>${v}</td>`).join('')}</tr>`;
+            });
+          } else {
+            html += `<p>No data available</p>`;
+          }
+          html += `</table></body></html>`;
+          printWindow.document.write(html);
+          printWindow.document.close();
+          printWindow.print();
+        }
+      } else {
+        alert("Download as PDF available on Web platform.");
+      }
+    }
+    setDownloadDialogVisible(false);
+    setDownloadTarget(null);
+  };
+
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1A237E" />
-        <Text style={styles.loadingText}>Loading Analytics...</Text>
+        <ActivityIndicator size="large" color="#00f3ff" />
+        <Text style={styles.loadingText}>Initializing CRM System...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.outerContainer}>
-      <Appbar.Header style={styles.appbar} elevated>
-        <Appbar.Content title="Admin Dashboard" titleStyle={styles.appbarTitle} />
-        <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/adminProfile")} color="#1A237E" />
-        <Appbar.Action icon="logout" onPress={logout} color="#1A237E" />
-      </Appbar.Header>
+      {!isDesktop && (
+        <Appbar.Header style={styles.appbar} elevated>
+          <Appbar.Content title="CRM Admin" titleStyle={styles.appbarTitle} />
+          <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/adminProfile")} color="#00f3ff" />
+          <Appbar.Action icon="logout" onPress={logout} color="#00f3ff" />
+        </Appbar.Header>
+      )}
 
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View style={styles.responsiveWrapper}>
+      <View style={styles.layoutContainer}>
+        {isDesktop && (
+          <View style={styles.sidebar}>
+            <Text style={styles.sidebarTitle}>C R M</Text>
+            <Divider style={styles.sidebarDivider} />
+            <List.Item 
+              title="Dashboard" 
+              left={() => <List.Icon icon="view-dashboard-outline" color="#00f3ff" />} 
+              titleStyle={styles.sidebarItemText} 
+              onPress={() => setViewMode('employees')}
+            />
+            <List.Item 
+              title="Staff Grid" 
+              left={() => <List.Icon icon="account-group-outline" color="#00f3ff" />} 
+              titleStyle={styles.sidebarItemText} 
+              onPress={() => setViewMode('employees')}
+            />
+            <List.Item 
+              title="Lead Queue" 
+              left={() => <List.Icon icon="target" color="#00f3ff" />} 
+              titleStyle={styles.sidebarItemText} 
+              onPress={() => setViewMode('leads')}
+            />
+            <View style={{ flex: 1 }} />
+            <List.Item 
+              title="Profile" 
+              left={() => <List.Icon icon="account-circle-outline" color="#94A3B8" />} 
+              titleStyle={{ color: '#94A3B8' }} 
+              onPress={() => router.push("/(tabs)/adminProfile")}
+            />
+            <List.Item 
+              title="Log out" 
+              left={() => <List.Icon icon="logout" color="#EF4444" />} 
+              titleStyle={{ color: '#EF4444' }} 
+              onPress={logout}
+            />
+          </View>
+        )}
+
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={[styles.scrollContent, isDesktop && { paddingLeft: 16 }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00f3ff" />}
+        >
+          <View style={styles.responsiveWrapper}>
           
           {/* Dashboard Hero / Stats Summary */}
           <View style={styles.heroSection}>
             <View style={styles.heroHeader}>
-              <Text variant="headlineMedium" style={styles.heroTitle}>Overview</Text>
-              <SegmentedButtons
-                value={viewMode}
-                onValueChange={v => setViewMode(v as any)}
-                style={styles.viewSwitcher}
-                buttons={[
-                  { value: 'employees', label: 'Staff', icon: 'account-group' },
-                  { value: 'leads', label: 'Leads', icon: 'target' },
-                ]}
-              />
+              <Text variant="headlineMedium" style={styles.heroTitle}>System Overview</Text>
+              {!isDesktop && (
+                <SegmentedButtons
+                  value={viewMode}
+                  onValueChange={v => setViewMode(v as any)}
+                  style={styles.viewSwitcher}
+                  theme={{ colors: { secondaryContainer: 'rgba(0, 243, 255, 0.2)', onSecondaryContainer: '#00f3ff', outline: 'rgba(0, 243, 255, 0.5)' } }}
+                  buttons={[
+                    { value: 'employees', label: 'Staff', icon: 'account-group', checkedColor: '#00f3ff', uncheckedColor: '#94A3B8' },
+                    { value: 'leads', label: 'Leads', icon: 'target', checkedColor: '#00f3ff', uncheckedColor: '#94A3B8' },
+                  ]}
+                />
+              )}
             </View>
             
             <View style={styles.gridRow}>
-              <Surface style={[styles.statCard, { borderLeftColor: '#1A237E' }]} elevation={1}>
-                <IconButton icon="account-tie" iconColor="#1A237E" size={24} style={styles.statIcon} />
-                <View>
-                  <Text variant="displaySmall" style={styles.statValue}>{employees.length}</Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL STAFF</Text>
-                </View>
-              </Surface>
-              <Surface style={[styles.statCard, { borderLeftColor: '#FF8F00' }]} elevation={1}>
-                <IconButton icon="account-check-outline" iconColor="#FF8F00" size={24} style={styles.statIcon} />
-                <View>
-                  <Text variant="displaySmall" style={[styles.statValue, { color: '#FF8F00' }]}>
-                    {employees.reduce((acc, curr) => acc + (Number(curr.contacted_count) || 0), 0)}
-                  </Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONTACTED</Text>
-                </View>
-              </Surface>
-              <Surface style={[styles.statCard, { borderLeftColor: '#00796B' }]} elevation={1}>
-                <IconButton icon="currency-usd" iconColor="#00796B" size={24} style={styles.statIcon} />
-                <View>
-                  <Text variant="displaySmall" style={[styles.statValue, { color: '#00796B' }]}>
-                    {employees.reduce((acc, curr) => acc + (Number(curr.converted_count) || 0), 0)}
-                  </Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONVERTED</Text>
-                </View>
-              </Surface>
-              <Surface style={[styles.statCard, { borderLeftColor: '#7C3AED' }]} elevation={1}>
-                <IconButton icon="database-outline" iconColor="#7C3AED" size={24} style={styles.statIcon} />
-                <View>
-                  <Text variant="displaySmall" style={[styles.statValue, { color: '#7C3AED' }]}>
-                    {leads.length}
-                  </Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
-                </View>
-              </Surface>
-              <Surface style={[styles.statCard, { borderLeftColor: '#EF4444' }]} elevation={1}>
-                <IconButton icon="alert-circle-outline" iconColor="#EF4444" size={24} style={styles.statIcon} />
-                <View>
-                  <Text variant="displaySmall" style={[styles.statValue, { color: '#EF4444' }]}>
-                    {leads.filter(l => !l.assigned_to).length}
-                  </Text>
-                  <Text variant="labelMedium" style={styles.statLabel}>UNALLOCATED</Text>
-                </View>
-              </Surface>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('staff')} style={{flex: 1, minWidth: 140}}>
+                <Surface style={[styles.statCard, { borderLeftColor: '#00f3ff', shadowColor: '#00f3ff', flex: 1 }]} elevation={2}>
+                  <IconButton icon="account-tie" iconColor="#00f3ff" size={24} style={styles.statIcon} />
+                  <View>
+                    <Text variant="displaySmall" style={[styles.statValue, { color: '#00f3ff' }]}>{employees.length}</Text>
+                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL STAFF</Text>
+                  </View>
+                </Surface>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('contacted')} style={{flex: 1, minWidth: 140}}>
+                <Surface style={[styles.statCard, { borderLeftColor: '#b537f2', shadowColor: '#b537f2', flex: 1 }]} elevation={2}>
+                  <IconButton icon="account-check-outline" iconColor="#b537f2" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(181, 55, 242, 0.1)'}]} />
+                  <View>
+                    <Text variant="displaySmall" style={[styles.statValue, { color: '#b537f2' }]}>
+                      {employees.reduce((acc, curr) => acc + (Number(curr.contacted_count) || 0), 0)}
+                    </Text>
+                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONTACTED</Text>
+                  </View>
+                </Surface>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('converted')} style={{flex: 1, minWidth: 140}}>
+                <Surface style={[styles.statCard, { borderLeftColor: '#00E676', shadowColor: '#00E676', flex: 1 }]} elevation={2}>
+                  <IconButton icon="currency-usd" iconColor="#00E676" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(0, 230, 118, 0.1)'}]} />
+                  <View>
+                    <Text variant="displaySmall" style={[styles.statValue, { color: '#00E676' }]}>
+                      {employees.reduce((acc, curr) => acc + (Number(curr.converted_count) || 0), 0)}
+                    </Text>
+                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONVERTED</Text>
+                  </View>
+                </Surface>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('leads')} style={{flex: 1, minWidth: 140}}>
+                <Surface style={[styles.statCard, { borderLeftColor: '#FF007F', shadowColor: '#FF007F', flex: 1 }]} elevation={2}>
+                  <IconButton icon="database-outline" iconColor="#FF007F" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(255, 0, 127, 0.1)'}]} />
+                  <View>
+                    <Text variant="displaySmall" style={[styles.statValue, { color: '#FF007F' }]}>
+                      {leads.length}
+                    </Text>
+                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
+                  </View>
+                </Surface>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('unallocated')} style={{flex: 1, minWidth: 140}}>
+                <Surface style={[styles.statCard, { borderLeftColor: '#FF3D00', shadowColor: '#FF3D00', flex: 1 }]} elevation={2}>
+                  <IconButton icon="alert-circle-outline" iconColor="#FF3D00" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(255, 61, 0, 0.1)'}]} />
+                  <View>
+                    <Text variant="displaySmall" style={[styles.statValue, { color: '#FF3D00' }]}>
+                      {leads.filter(l => !l.assigned_to).length}
+                    </Text>
+                    <Text variant="labelMedium" style={styles.statLabel}>UNALLOCATED</Text>
+                  </View>
+                </Surface>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Core Tools Section */}
           <Surface style={styles.toolsSurface} elevation={2}>
             <View style={styles.toolsHeader}>
-              <Text variant="titleLarge" style={styles.sectionHeading}>Business Intelligence Tools</Text>
+              <Text variant="titleLarge" style={styles.sectionHeading}>Command Protocols</Text>
               {selectedLeads.length > 0 && (
                 <Button 
                   mode="contained" 
                   icon="account-multiple-plus" 
-                  buttonColor="#FF8F00"
+                  buttonColor="rgba(181, 55, 242, 0.8)"
                   onPress={() => setAssignVisible(true)}
                   style={styles.bulkAssignBtn}
                 >
@@ -316,6 +458,17 @@ export default function AdminDashboard() {
               )}
             </View>
             <View style={styles.toolsGrid}>
+              <Button 
+                icon="account-plus" 
+                mode="contained" 
+                buttonColor="rgba(255, 193, 7, 0.15)"
+                onPress={() => setAddLeadVisible(true)}
+                style={[styles.toolBtn, { borderColor: '#FFC107', borderWidth: 1 }]}
+                contentStyle={styles.toolBtnContent}
+                textColor="#FFC107"
+              >
+                Add Lead
+              </Button>
               {Platform.OS === 'web' && (
                 <Button 
                   icon="file-upload-outline" 
@@ -332,11 +485,11 @@ export default function AdminDashboard() {
               <Button 
                 icon="email-plus-outline" 
                 mode="contained" 
-                buttonColor="#1A237E"
+                buttonColor="rgba(0, 243, 255, 0.15)"
                 onPress={() => setBulkEmailVisible(true)}
-                style={styles.toolBtn}
+                style={[styles.toolBtn, { borderColor: '#00f3ff', borderWidth: 1 }]}
                 contentStyle={styles.toolBtnContent}
-                textColor="white"
+                textColor="#00f3ff"
               >
                 {selectedLeads.length > 0 ? 'Email Selected' : 'Broadcast Email'}
               </Button>
@@ -344,11 +497,11 @@ export default function AdminDashboard() {
               <Button 
                 icon="whatsapp" 
                 mode="contained" 
-                buttonColor="#25D366"
+                buttonColor="rgba(0, 230, 118, 0.15)"
                 onPress={() => setBulkWhatsAppVisible(true)}
-                style={styles.toolBtn}
+                style={[styles.toolBtn, { borderColor: '#00E676', borderWidth: 1 }]}
                 contentStyle={styles.toolBtnContent}
-                textColor="white"
+                textColor="#00E676"
               >
                 Bulk WhatsApp
               </Button>
@@ -361,8 +514,8 @@ export default function AdminDashboard() {
               /* Employee Management */
               <View style={styles.listSection}>
                 <View style={styles.listHeader}>
-                  <Text variant="titleMedium" style={styles.listTitle}>Staff Management (Click for Details)</Text>
-                  <Chip icon="check-circle" style={styles.countChip}>{employees.length}</Chip>
+                  <Text variant="titleMedium" style={styles.listTitle}>Staff Matrix</Text>
+                  <Chip icon="check-circle" style={styles.countChip} textStyle={{color: '#00f3ff'}}>{employees.length}</Chip>
                 </View>
                 <View style={styles.itemGrid}>
                   {employees.map((e) => (
@@ -373,15 +526,15 @@ export default function AdminDashboard() {
                           <View style={styles.cardInfo}>
                             <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
                             <View style={styles.empStatsRow}>
-                              <Text variant="labelSmall" style={{color: '#FF8F00'}}>Contacted: {e.contacted_count || 0}</Text>
-                              <Text variant="labelSmall" style={{color: '#00796B'}}>  •  Converted: {e.converted_count || 0}</Text>
+                              <Text variant="labelSmall" style={{color: '#b537f2'}}>Contacted: {e.contacted_count || 0}</Text>
+                              <Text variant="labelSmall" style={{color: '#00E676'}}>  •  Converted: {e.converted_count || 0}</Text>
                             </View>
                           </View>
                           <View style={styles.cardAction}>
                             {e.status === "pending" ? (
-                              <Button mode="contained" onPress={(evt) => { evt.stopPropagation(); approve(e.id); }} buttonColor="#1A237E" textColor="white" style={styles.actionButton}>Approve</Button>
+                              <Button mode="contained" onPress={(evt) => { evt.stopPropagation(); approve(e.id); }} buttonColor="#00f3ff" textColor="#050914" style={styles.actionButton}>Authorize</Button>
                             ) : (
-                              <Chip textStyle={{ color: '#00796B' }} style={styles.statusChip}>Active</Chip>
+                              <Chip textStyle={{ color: '#00E676' }} style={styles.statusChip}>Online</Chip>
                             )}
                           </View>
                         </Card.Content>
@@ -395,10 +548,10 @@ export default function AdminDashboard() {
               <View style={styles.listSection}>
                 <View style={styles.listHeader}>
                   <View>
-                    <Text variant="titleMedium" style={styles.listTitle}>Lead Allocation Queue</Text>
-                    <Text variant="bodySmall" style={{ color: '#64748B' }}>Search and filter leads below</Text>
+                    <Text variant="titleMedium" style={styles.listTitle}>Lead Database</Text>
+                    <Text variant="bodySmall" style={{ color: '#00f3ff', opacity: 0.7 }}>Query nodes below</Text>
                   </View>
-                  <Chip icon="trending-up" style={styles.countChip}>{filteredLeads.length}</Chip>
+                  <Chip icon="trending-up" style={styles.countChip} textStyle={{color: '#00f3ff'}}>{filteredLeads.length}</Chip>
                 </View>
 
                 {/* Filter Bar */}
@@ -438,22 +591,23 @@ export default function AdminDashboard() {
                     left={<TextInput.Icon icon="calendar" />}
                   />
                 </Surface>
-                <View style={styles.assignmentFilterRow}>
+                  <View style={styles.assignmentFilterRow}>
                   <SegmentedButtons
                     value={leadFilters.assignment}
                     onValueChange={v => setLeadFilters({...leadFilters, assignment: v})}
                     style={styles.assignmentSegment}
+                    theme={{ colors: { secondaryContainer: 'rgba(0, 243, 255, 0.2)', onSecondaryContainer: '#00f3ff', outline: 'rgba(0, 243, 255, 0.3)' } }}
                     buttons={[
-                      { value: 'all', label: 'All Leads' },
-                      { value: 'assigned', label: 'Assigned' },
-                      { value: 'unallocated', label: 'Unallocated' },
+                      { value: 'all', label: 'All Leads', checkedColor: '#00f3ff', uncheckedColor: '#94A3B8' },
+                      { value: 'assigned', label: 'Assigned', checkedColor: '#00f3ff', uncheckedColor: '#94A3B8' },
+                      { value: 'unallocated', label: 'Unallocated', checkedColor: '#00f3ff', uncheckedColor: '#94A3B8' },
                     ]}
                   />
                   {(leadFilters.name || leadFilters.source || leadFilters.phone || leadFilters.date || leadFilters.assignment !== 'all') && (
                     <Button 
                       mode="text" 
                       onPress={() => setLeadFilters({name:"", source:"", phone:"", date:"", assignment: 'all'})}
-                      textColor="#D32F2F"
+                      textColor="#EF4444"
                       icon="filter-variant-remove"
                     >
                       Clear
@@ -474,14 +628,14 @@ export default function AdminDashboard() {
                       <View style={styles.leadMain}>
                         <IconButton 
                           icon={selectedLeads.includes(l.id) ? "checkbox-marked" : "checkbox-blank-outline"} 
-                          iconColor={selectedLeads.includes(l.id) ? "#1A237E" : (l.assigned_to ? "#E2E8F0" : "#94A3B8")}
+                          iconColor={selectedLeads.includes(l.id) ? "#00f3ff" : (l.assigned_to ? "#94A3B8" : "#E2E8F0")}
                           onPress={() => !l.assigned_to && toggleLeadSelection(l.id)}
                           disabled={!!l.assigned_to}
                         />
                         <View style={styles.leadMeta}>
                           <Text variant="titleMedium" style={[styles.leadName, !!l.assigned_to && { color: '#94A3B8' }]}>{l.name}</Text>
                           <View style={styles.sourceTag}>
-                            <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} />
+                            <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} iconColor="#94A3B8" />
                             <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
                             <Text variant="labelSmall" style={styles.sourceText}>{'     Purpose: '+l.query}</Text>
                           </View>
@@ -489,15 +643,19 @@ export default function AdminDashboard() {
                         {!l.assigned_to && !selectedLeads.includes(l.id) && (
                           <IconButton 
                             icon="account-plus-outline" 
-                            mode="contained-tonal" 
+                            mode="contained-tonal"
+                            containerColor="rgba(0, 243, 255, 0.15)"
+                            iconColor="#00f3ff"
                             onPress={() => { setSelectedLead(l.id); setAssignVisible(true); }}
                           />
                         )}
                       </View>
-                      <Divider style={{ marginVertical: 8 }} />
+                      <Divider style={{ marginVertical: 8, backgroundColor: 'rgba(255,255,255,0.05)' }} />
                       <View style={styles.leadFooter}>
-                        <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
-                        <Text variant="labelSmall" style={styles.phoneText}>{l.email}</Text>
+                        <View style={{ flex: 1, paddingRight: 12 }}>
+                          <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
+                          <Text variant="labelSmall" style={[styles.phoneText, { color: '#94A3B8' }]} numberOfLines={1} ellipsizeMode="tail">{l.email}</Text>
+                        </View>
                         <Chip 
                           style={[
                             styles.assignChip, 
@@ -505,8 +663,9 @@ export default function AdminDashboard() {
                           ]}
                           textStyle={[
                             styles.assignChipText,
-                            l.assigned_to ? { color: '#1A237E' } : { color: '#FF8F00' }
+                            { color: l.assigned_to ? '#00E676' : '#EF4444' }
                           ]}
+                          icon={() => <IconButton icon={l.assigned_to ? "account-check" : "account-clock-outline"} size={12} style={{ margin: 0 }} iconColor={l.assigned_to ? "#00E676" : "#EF4444"}/>}
                         >
                           {l.assigned_to ? 'Assigned' : 'Unallocated'}
                         </Chip>
@@ -658,8 +817,55 @@ export default function AdminDashboard() {
               <Button mode="contained" onPress={() => setDetailsVisible(false)} buttonColor="#1A237E" textColor="#fff" style={{ flex: 1, borderRadius: 12 }}>Close Portfolio</Button>
             </Dialog.Actions>
           </Dialog>
+
+          <Dialog visible={downloadDialogVisible} onDismiss={() => setDownloadDialogVisible(false)} style={[styles.dialog, { backgroundColor: '#0B1120', borderWidth: 1, borderColor: 'rgba(0, 243, 255, 0.2)' }]}>
+            <Dialog.Title style={[styles.dialogTitle, { color: '#00f3ff' }]}>Export Data</Dialog.Title>
+            <Dialog.Content>
+              <Text variant="bodyMedium" style={[styles.dialogSubtitle, { color: '#94A3B8' }]}>Select your preferred export format for the requested data module.</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                <Button 
+                  mode="contained" 
+                  icon="file-excel" 
+                  onPress={() => handleDownload('excel')} 
+                  buttonColor="rgba(0, 230, 118, 0.2)" 
+                  textColor="#00E676" 
+                  style={{ flex: 1, borderRadius: 12, borderColor: 'rgba(0, 230, 118, 0.5)', borderWidth: 1 }}
+                >
+                  Excel (CSV)
+                </Button>
+                <Button 
+                  mode="contained" 
+                  icon="file-pdf-box" 
+                  onPress={() => handleDownload('pdf')} 
+                  buttonColor="rgba(255, 0, 127, 0.2)" 
+                  textColor="#FF007F" 
+                  style={{ flex: 1, borderRadius: 12, borderColor: 'rgba(255, 0, 127, 0.5)', borderWidth: 1 }}
+                >
+                  PDF Report
+                </Button>
+              </View>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setDownloadDialogVisible(false)} textColor="#64748B">Cancel</Button>
+            </Dialog.Actions>
+          </Dialog>
+
+          <Dialog visible={addLeadVisible} onDismiss={() => setAddLeadVisible(false)} style={[styles.dialog, { backgroundColor: '#0B1120', borderWidth: 1, borderColor: 'rgba(255, 193, 7, 0.2)' }]}>
+            <Dialog.Title style={[styles.dialogTitle, { color: '#FFC107' }]}>Add New Lead</Dialog.Title>
+            <Dialog.Content>
+              <TextInput label="Name" value={newLead.name} onChangeText={t => setNewLead({...newLead, name: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#FFC107', onSurfaceVariant: '#94A3B8'}}} />
+              <TextInput label="Phone" value={newLead.phone} onChangeText={t => setNewLead({...newLead, phone: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#FFC107', onSurfaceVariant: '#94A3B8'}}} keyboardType="phone-pad" />
+              <TextInput label="Email (Optional)" value={newLead.email} onChangeText={t => setNewLead({...newLead, email: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#FFC107', onSurfaceVariant: '#94A3B8'}}} keyboardType="email-address" />
+              <TextInput label="Query/Purpose" value={newLead.query} onChangeText={t => setNewLead({...newLead, query: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#FFC107', onSurfaceVariant: '#94A3B8'}}} multiline numberOfLines={3} />
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={() => setAddLeadVisible(false)} textColor="#64748B">Cancel</Button>
+              <Button onPress={handleAddLead} buttonColor="#FFC107" textColor="#050914" mode="contained" style={{ borderRadius: 8 }}>Save Lead</Button>
+            </Dialog.Actions>
+          </Dialog>
         </Portal>
       </ScrollView>
+      </View>
     </View>
   );
 }
@@ -667,7 +873,38 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#050914',
+  },
+  layoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: 260,
+    backgroundColor: '#0B1120',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(0, 243, 255, 0.2)',
+    paddingTop: 32,
+    paddingHorizontal: 16,
+  },
+  sidebarTitle: {
+    color: '#00f3ff',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: 16,
+    textShadowColor: 'rgba(0, 243, 255, 0.5)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 10,
+  },
+  sidebarDivider: {
+    backgroundColor: 'rgba(0, 243, 255, 0.2)',
+    marginBottom: 16,
+  },
+  sidebarItemText: {
+    color: '#E2E8F0',
+    fontWeight: '600',
   },
   container: {
     flex: 1,
@@ -683,13 +920,18 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   appbar: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0B1120',
+    elevation: 4,
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(0, 243, 255, 0.1)',
   },
   appbarTitle: {
     fontWeight: '900',
-    color: '#1A237E',
+    color: '#00f3ff',
     letterSpacing: 1,
   },
   heroSection: {
@@ -705,7 +947,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   viewSwitcher: {
     minWidth: 240,
@@ -719,33 +961,44 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 280,
     padding: 24,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderLeftWidth: 6,
+    borderRadius: 24,
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
+    borderLeftWidth: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   statIcon: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(0, 243, 255, 0.1)',
     marginRight: 16,
   },
   statValue: {
     fontWeight: '900',
-    color: '#1E293B',
+    color: '#E2E8F0',
     lineHeight: 40,
   },
   statLabel: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '700',
     letterSpacing: 1,
   },
   toolsSurface: {
-    padding: 24,
-    borderRadius: 24,
-    backgroundColor: '#fff',
+    padding: 28,
+    borderRadius: 28,
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     marginBottom: 32,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0, 243, 255, 0.1)',
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 2,
   },
   toolsHeader: {
     flexDirection: 'row',
@@ -757,7 +1010,7 @@ const styles = StyleSheet.create({
   },
   sectionHeading: {
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   bulkAssignBtn: {
     borderRadius: 12,
@@ -790,23 +1043,33 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontWeight: '700',
-    color: '#475569',
+    color: '#E2E8F0',
   },
   countChip: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 243, 255, 0.3)',
   },
   itemGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 20,
   },
   employeeCardWrapper: {
     flex: 1,
     minWidth: 320,
   },
   modernCard: {
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    borderRadius: 24,
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 243, 255, 0.1)',
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 4,
   },
   modernCardContent: {
     flexDirection: 'row',
@@ -814,7 +1077,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   avatar: {
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(0, 243, 255, 0.2)',
   },
   cardInfo: {
     flex: 1,
@@ -822,7 +1085,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   empStatsRow: {
     flexDirection: 'row',
@@ -839,13 +1102,13 @@ const styles = StyleSheet.create({
     minWidth: 320,
     padding: 20,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(0, 243, 255, 0.1)',
   },
   selectedLeadSurface: {
-    borderColor: '#1A237E',
-    backgroundColor: '#F8FAFF',
+    borderColor: '#00f3ff',
+    backgroundColor: 'rgba(0, 243, 255, 0.1)',
     borderWidth: 2,
   },
   leadMain: {
@@ -858,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   leadName: {
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   sourceTag: {
     flexDirection: 'row',
@@ -867,7 +1130,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   sourceText: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '600',
   },
   leadFooter: {
@@ -876,7 +1139,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   phoneText: {
-    color: '#1A237E',
+    color: '#00f3ff',
     fontWeight: '700',
   },
   assignChip: {
@@ -884,14 +1147,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   assignedChip: {
-    backgroundColor: '#E0E7FF',
+    backgroundColor: 'rgba(0, 230, 118, 0.15)',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: 'rgba(0, 230, 118, 0.3)',
   },
   unallocatedChip: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
     borderWidth: 1,
-    borderColor: '#FFEDD5',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   assignChipText: {
     fontSize: 10,
@@ -1031,18 +1294,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     padding: 12,
     borderRadius: 16,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     marginBottom: 16,
     gap: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0, 243, 255, 0.1)',
   },
   filterInput: {
     flex: 1,
     minWidth: 140,
     height: 40,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(5, 9, 20, 0.8)',
   },
   assignmentFilterRow: {
     flexDirection: 'row',

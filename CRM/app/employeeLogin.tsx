@@ -128,6 +128,9 @@ export default function EmployeeLogin() {
                     <TouchableOpacity onPress={() => router.push("/register")} style={{ marginTop: 16 }}>
                       <Text style={styles.link}>Request Access Privileges</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.replace("/adminLogin")} style={{ marginTop: 16 }}>
+                      <Text style={[styles.link, { color: "#1A237E" }]}>Switch to Admin Login</Text>
+                    </TouchableOpacity>
                   </View>
                 </Card.Content>
               </Card>

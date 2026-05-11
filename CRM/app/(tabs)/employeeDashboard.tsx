@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking } from "react-native";
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Linking, useWindowDimensions } from "react-native";
 import { 
   Text, 
   Card, 
@@ -39,6 +39,8 @@ export default function EmployeeDashboard() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
 
   // Interaction Modal States
   const [interactionVisible, setInteractionVisible] = useState(false);
@@ -46,6 +48,8 @@ export default function EmployeeDashboard() {
   const [pendingStatus, setPendingStatus] = useState<string>("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [addLeadVisible, setAddLeadVisible] = useState(false);
+  const [newLead, setNewLead] = useState({ name: "", phone: "", email: "", source: "Employee Added", query: "" });
 
   const fetchData = async () => {
     const userId = user?.id || user?.userId;
@@ -110,10 +114,25 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleAddLead = async () => {
+    if (!newLead.name || !newLead.phone) return alert("Name and phone are required.");
+    const userId = user?.id || user?.userId;
+    if (!userId) return alert("User session missing.");
+    try {
+      await API.post("/leads", { ...newLead, assigned_to: userId });
+      alert("Lead added and assigned to you successfully!");
+      setAddLeadVisible(false);
+      setNewLead({ name: "", phone: "", email: "", source: "Employee Added", query: "" });
+      fetchData();
+    } catch(err) {
+      alert("Failed to add lead.");
+    }
+  };
+
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0F172A" />
+        <ActivityIndicator size="large" color="#00f3ff" />
         <Text style={styles.loadingText}>Syncing Workspace...</Text>
       </View>
     );
@@ -121,39 +140,67 @@ export default function EmployeeDashboard() {
 
   return (
     <View style={styles.outerContainer}>
-      <Appbar.Header style={styles.appbar} elevated>
-        <Appbar.Content title="Portfolio" titleStyle={styles.appbarTitle} />
-        <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/employeeProfile")} color="#0F172A" />
-        <Appbar.Action icon="logout" onPress={logout} color="#0F172A" />
-      </Appbar.Header>
+      {!isDesktop && (
+        <Appbar.Header style={styles.appbar} elevated>
+          <Appbar.Content title="CRM Portal" titleStyle={styles.appbarTitle} />
+          <Appbar.Action icon="account-circle-outline" onPress={() => router.push("/(tabs)/employeeProfile")} color="#00f3ff" />
+          <Appbar.Action icon="logout" onPress={logout} color="#00f3ff" />
+        </Appbar.Header>
+      )}
 
-      <ScrollView 
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View style={styles.responsiveWrapper}>
+      <View style={styles.layoutContainer}>
+        {isDesktop && (
+          <View style={styles.sidebar}>
+            <Text style={styles.sidebarTitle}>C R M</Text>
+            <Divider style={styles.sidebarDivider} />
+            <List.Item 
+              title="Portfolio" 
+              left={() => <List.Icon icon="briefcase-outline" color="#00f3ff" />} 
+              titleStyle={styles.sidebarItemText} 
+            />
+            <View style={{ flex: 1 }} />
+            <List.Item 
+              title="Profile" 
+              left={() => <List.Icon icon="account-circle-outline" color="#94A3B8" />} 
+              titleStyle={{ color: '#94A3B8' }} 
+              onPress={() => router.push("/(tabs)/employeeProfile")}
+            />
+            <List.Item 
+              title="Log out" 
+              left={() => <List.Icon icon="logout" color="#EF4444" />} 
+              titleStyle={{ color: '#EF4444' }} 
+              onPress={logout}
+            />
+          </View>
+        )}
+
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={[styles.scrollContent, isDesktop && { paddingLeft: 16 }]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00f3ff" />}
+        >
+          <View style={styles.responsiveWrapper}>
           
           {/* Header Stats */}
           <View style={styles.heroSection}>
             <View style={styles.heroText}>
-              <Text variant="headlineMedium" style={styles.heroTitle}>Workplace</Text>
-              <Text variant="bodyLarge" style={styles.heroSubtitle}>Track and manage your active lead flow</Text>
+              <Text variant="headlineMedium" style={styles.heroTitle}>Terminal</Text>
+              <Text variant="bodyLarge" style={styles.heroSubtitle}>Track and manage your active leads</Text>
             </View>
             
             <View style={styles.statsGrid}>
-              <Surface style={styles.statBox} elevation={1}>
-                <Text variant="displaySmall" style={styles.statValue}>{leads.length}</Text>
+              <Surface style={[styles.statBox, { shadowColor: '#00f3ff' }]} elevation={2}>
+                <Text variant="displaySmall" style={[styles.statValue, { color: '#00f3ff' }]}>{leads.length}</Text>
                 <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
               </Surface>
-              <Surface style={styles.statBox} elevation={1}>
-                <Text variant="displaySmall" style={[styles.statValue, { color: '#0F172A' }]}>
+              <Surface style={[styles.statBox, { shadowColor: '#b537f2' }]} elevation={2}>
+                <Text variant="displaySmall" style={[styles.statValue, { color: '#b537f2' }]}>
                   {leads.filter(l => l.status === 'contacted').length}
                 </Text>
                 <Text variant="labelMedium" style={styles.statLabel}>CONTACTED</Text>
               </Surface>
-              <Surface style={styles.statBox} elevation={1}>
-                <Text variant="displaySmall" style={[styles.statValue, { color: '#10B981' }]}>
+              <Surface style={[styles.statBox, { shadowColor: '#00E676' }]} elevation={2}>
+                <Text variant="displaySmall" style={[styles.statValue, { color: '#00E676' }]}>
                   {leads.filter(l => l.status === 'converted').length}
                 </Text>
                 <Text variant="labelMedium" style={styles.statLabel}>CONVERTED</Text>
@@ -164,16 +211,19 @@ export default function EmployeeDashboard() {
           <Divider style={styles.divider} />
 
           <View style={styles.listHeader}>
-            <Text variant="titleLarge" style={styles.sectionTitle}>Active Assignments</Text>
-            <IconButton icon="filter-variant" size={20} />
+            <Text variant="titleLarge" style={styles.sectionTitle}>Active Nodes</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Button icon="account-plus" mode="contained" onPress={() => setAddLeadVisible(true)} buttonColor="rgba(0, 243, 255, 0.15)" textColor="#00f3ff" style={{marginRight: 8, borderColor: '#00f3ff', borderWidth: 1}}>Add</Button>
+              <IconButton icon="filter-variant" size={20} iconColor="#00f3ff" />
+            </View>
           </View>
 
           {leads.length === 0 ? (
             <Surface style={styles.emptySurface} elevation={1}>
-              <IconButton icon="account-off-outline" size={60} iconColor="#E2E8F0" />
-              <Text variant="titleMedium" style={styles.emptyTitle}>No leads allocated</Text>
-              <Text variant="bodyMedium" style={styles.emptyText}>Pull to refresh or contact your admin for assignments.</Text>
-              <Button mode="contained" onPress={onRefresh} style={styles.refreshBtn} buttonColor="#0F172A">Check Again</Button>
+              <IconButton icon="server-network-off" size={60} iconColor="rgba(0, 243, 255, 0.2)" />
+              <Text variant="titleMedium" style={styles.emptyTitle}>No connections established</Text>
+              <Text variant="bodyMedium" style={styles.emptyText}>Pull to refresh or contact CRM admin for allocation.</Text>
+              <Button mode="contained" onPress={onRefresh} style={styles.refreshBtn} buttonColor="rgba(0, 243, 255, 0.2)" textColor="#00f3ff">Re-sync</Button>
             </Surface>
           ) : (
             <View style={styles.leadGrid}>
@@ -191,13 +241,13 @@ export default function EmployeeDashboard() {
                     <Chip 
                       style={[
                         styles.statusChip, 
-                        l.status === 'contacted' && { backgroundColor: '#FEF3C7' },
-                        l.status === 'converted' && { backgroundColor: '#D1FAE5' }
+                        l.status === 'contacted' && { backgroundColor: 'rgba(181, 55, 242, 0.2)', borderColor: 'rgba(181, 55, 242, 0.5)' },
+                        l.status === 'converted' && { backgroundColor: 'rgba(0, 230, 118, 0.2)', borderColor: 'rgba(0, 230, 118, 0.5)' }
                       ]} 
                       textStyle={[
                         styles.statusText,
-                        l.status === 'contacted' && { color: '#92400E' },
-                        l.status === 'converted' && { color: '#065F46' }
+                        l.status === 'contacted' && { color: '#b537f2' },
+                        l.status === 'converted' && { color: '#00E676' }
                       ]}
                     >
                       {l.status?.toUpperCase() || 'NEW'}
@@ -232,9 +282,9 @@ export default function EmployeeDashboard() {
                       icon="account-check-outline" 
                       mode={l.status === 'contacted' ? "contained" : "contained-tonal"}
                       onPress={() => openInteractionDialog(l, 'contacted')} 
-                      style={[styles.statusUpdateBtn, { flex: 1 }]}
-                      buttonColor={l.status === 'contacted' ? '#0F172A' : '#F1F5F9'}
-                      textColor={l.status === 'contacted' ? '#FFF' : '#475569'}
+                      style={[styles.statusUpdateBtn, { flex: 1, borderWidth: l.status === 'contacted' ? 0 : 1, borderColor: '#b537f2' }]}
+                      buttonColor={l.status === 'contacted' ? 'rgba(181, 55, 242, 0.8)' : 'rgba(181, 55, 242, 0.1)'}
+                      textColor={l.status === 'contacted' ? '#FFF' : '#b537f2'}
                     >
                       Contacted
                     </Button>
@@ -242,9 +292,9 @@ export default function EmployeeDashboard() {
                       icon="currency-usd" 
                       mode={l.status === 'converted' ? "contained" : "contained-tonal"}
                       onPress={() => openInteractionDialog(l, 'converted')} 
-                      style={[styles.statusUpdateBtn, { flex: 1.2 }]}
-                      buttonColor={l.status === 'converted' ? '#10B981' : '#F1F5F9'}
-                      textColor={l.status === 'converted' ? '#FFF' : '#475569'}
+                      style={[styles.statusUpdateBtn, { flex: 1.2, borderWidth: l.status === 'converted' ? 0 : 1, borderColor: '#00E676' }]}
+                      buttonColor={l.status === 'converted' ? 'rgba(0, 230, 118, 0.8)' : 'rgba(0, 230, 118, 0.1)'}
+                      textColor={l.status === 'converted' ? '#FFF' : '#00E676'}
                     >
                       Converted
                     </Button>
@@ -255,6 +305,7 @@ export default function EmployeeDashboard() {
           )}
         </View>
       </ScrollView>
+      </View>
 
       <Portal>
         <Dialog 
@@ -304,12 +355,26 @@ export default function EmployeeDashboard() {
             </Button>
           </Dialog.Actions>
         </Dialog>
+
+        <Dialog visible={addLeadVisible} onDismiss={() => setAddLeadVisible(false)} style={[styles.dialog, { backgroundColor: '#0B1120', borderWidth: 1, borderColor: 'rgba(0, 243, 255, 0.2)' }]}>
+          <Dialog.Title style={[styles.dialogTitle, { color: '#00f3ff' }]}>Add Personal Lead</Dialog.Title>
+          <Dialog.Content>
+            <TextInput label="Name" value={newLead.name} onChangeText={t => setNewLead({...newLead, name: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} />
+            <TextInput label="Phone" value={newLead.phone} onChangeText={t => setNewLead({...newLead, phone: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} keyboardType="phone-pad" />
+            <TextInput label="Email (Optional)" value={newLead.email} onChangeText={t => setNewLead({...newLead, email: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} keyboardType="email-address" />
+            <TextInput label="Query/Purpose" value={newLead.query} onChangeText={t => setNewLead({...newLead, query: t})} mode="outlined" style={styles.dialogInput} textColor="#E2E8F0" theme={{colors: {background: '#050914', primary: '#00f3ff', onSurfaceVariant: '#94A3B8'}}} multiline numberOfLines={3} />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setAddLeadVisible(false)} textColor="#64748B">Cancel</Button>
+            <Button onPress={handleAddLead} buttonColor="#00f3ff" textColor="#050914" mode="contained" style={{ borderRadius: 8 }}>Save & Assign</Button>
+          </Dialog.Actions>
+        </Dialog>
       </Portal>
 
       <FAB
         icon="plus"
         style={styles.fab}
-        color="#fff"
+        color="#050914"
         label="Log Interaction"
         onPress={() => console.log('Log Interaction')}
       />
@@ -320,7 +385,38 @@ export default function EmployeeDashboard() {
 const styles = StyleSheet.create({
   outerContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#050914',
+  },
+  layoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: 260,
+    backgroundColor: '#0B1120',
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(0, 243, 255, 0.2)',
+    paddingTop: 32,
+    paddingHorizontal: 16,
+  },
+  sidebarTitle: {
+    color: '#00f3ff',
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 4,
+    textAlign: 'center',
+    marginBottom: 16,
+    textShadowColor: 'rgba(0, 243, 255, 0.5)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 10,
+  },
+  sidebarDivider: {
+    backgroundColor: 'rgba(0, 243, 255, 0.2)',
+    marginBottom: 16,
+  },
+  sidebarItemText: {
+    color: '#E2E8F0',
+    fontWeight: '600',
   },
   container: {
     flex: 1,
@@ -336,13 +432,18 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   appbar: {
-    backgroundColor: '#fff',
+    backgroundColor: '#0B1120',
+    elevation: 4,
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: 'rgba(0, 243, 255, 0.1)',
   },
   appbarTitle: {
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#00f3ff',
     letterSpacing: 1,
   },
   heroSection: {
@@ -353,10 +454,10 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontWeight: '900',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   heroSubtitle: {
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 4,
   },
   statsGrid: {
@@ -367,16 +468,21 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     minWidth: 140,
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: '#fff',
+    padding: 24,
+    borderRadius: 24,
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(0, 243, 255, 0.1)',
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 3,
   },
   statValue: {
     fontWeight: '900',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   statLabel: {
     color: '#94A3B8',
@@ -387,7 +493,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     marginVertical: 24,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(0, 243, 255, 0.2)',
   },
   listHeader: {
     flexDirection: 'row',
@@ -397,7 +503,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   leadGrid: {
     flexDirection: 'row',
@@ -407,18 +513,23 @@ const styles = StyleSheet.create({
   leadCard: {
     flex: 1,
     minWidth: 300,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     borderRadius: 24,
-    padding: 20,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(0, 243, 255, 0.1)',
+    shadowColor: '#00f3ff',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 4,
   },
   leadHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(0, 243, 255, 0.2)',
   },
   leadInfo: {
     flex: 1,
@@ -426,39 +537,41 @@ const styles = StyleSheet.create({
   },
   leadName: {
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#E2E8F0',
   },
   leadPhone: {
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2,
   },
   leadEmail: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontSize: 12,
   },
   leadQuery: {
-    color: '#475569',
+    color: '#E2E8F0',
     fontSize: 12,
     fontWeight: '600',
     marginTop: 4,
   },
   leadSource: {
-    color: '#94A3B8',
+    color: '#00f3ff',
     fontSize: 11,
     fontStyle: 'italic',
   },
   statusChip: {
-    backgroundColor: '#E0F2FE',
+    backgroundColor: 'rgba(0, 243, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 243, 255, 0.3)',
     height: 24,
   },
   statusText: {
-    color: '#0369A1',
+    color: '#00f3ff',
     fontSize: 10,
     fontWeight: '700',
   },
   cardDivider: {
     marginVertical: 16,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255,255,255,0.05)',
   },
   actionRow: {
     flexDirection: 'row',
@@ -477,13 +590,15 @@ const styles = StyleSheet.create({
   emptySurface: {
     padding: 48,
     borderRadius: 32,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(16, 24, 48, 0.7)',
     alignItems: 'center',
     marginTop: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 243, 255, 0.1)',
   },
   emptyTitle: {
     fontWeight: '800',
-    color: '#475569',
+    color: '#E2E8F0',
     marginTop: 16,
   },
   emptyText: {
@@ -501,23 +616,25 @@ const styles = StyleSheet.create({
     margin: 24,
     right: 0,
     bottom: 0,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#00f3ff',
     borderRadius: 20,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#050914',
   },
   loadingText: {
     marginTop: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#00f3ff',
   },
   dialog: {
     borderRadius: 24,
-    backgroundColor: '#fff',
+    backgroundColor: '#0B1120',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 243, 255, 0.2)',
   },
   interactionDialog: {
     maxWidth: 500,
@@ -532,15 +649,15 @@ const styles = StyleSheet.create({
   },
   dialogTitle: {
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#00f3ff',
     marginLeft: -8,
   },
   dialogSubtitle: {
-    color: '#64748B',
+    color: '#94A3B8',
     marginBottom: 16,
   },
   dialogInput: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(16, 24, 48, 0.5)',
   },
   inputFooter: {
     marginTop: 4,

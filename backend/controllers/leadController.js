@@ -21,12 +21,19 @@ const twilioClient = twilio(
 );
 
 exports.createLead = async (req, res) => {
-  const { name, phone, email, source, query } = req.body;
+  const { name, phone, email, source, query, assigned_to } = req.body;
   try {
-    await db.query(
-      "INSERT INTO leads(name,phone,email,source,query) VALUES($1,$2,$3,$4,$5)",
-      [name, phone, email, source, query]
-    );
+    if (assigned_to) {
+      await db.query(
+        "INSERT INTO leads(name,phone,email,source,query,assigned_to) VALUES($1,$2,$3,$4,$5,$6)",
+        [name, phone, email, source, query, assigned_to]
+      );
+    } else {
+      await db.query(
+        "INSERT INTO leads(name,phone,email,source,query) VALUES($1,$2,$3,$4,$5)",
+        [name, phone, email, source, query]
+      );
+    }
     res.send("Lead added successfully");
   } catch (err) {
     console.error("Error adding lead:", err);
