@@ -4,15 +4,20 @@ const csv = require("csv-parser");
 const fs = require("fs");
 const nodemailer = require("nodemailer");
 const twilio = require("twilio");
+const dns = require("dns");
 
+dns.setDefaultResultOrder("ipv4first");
 // EMAIL CONFIG
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
