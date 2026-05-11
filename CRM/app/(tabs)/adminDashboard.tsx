@@ -23,6 +23,13 @@ import { router } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
 import API from "../../services/api";
 
+import DashboardOverview from "../components/admin/DashboardOverview";
+import LeadsView from "../components/admin/LeadsView";
+import ImportLeads from "../components/admin/ImportLeads";
+import WhatsAppMessaging from "../components/admin/WhatsAppMessaging";
+import SettingsView from "../components/admin/SettingsView";
+import EmployeeMatrix from "../components/admin/EmployeeMatrix";
+
 interface Employee {
   id: string;
   name: string;
@@ -55,7 +62,7 @@ export default function AdminDashboard() {
   const isDesktop = width > 768;
 
   // Modal States
-  const [viewMode, setViewMode] = useState<'employees' | 'leads'>('employees');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'leads' | 'import' | 'whatsapp' | 'settings' | 'employees'>('dashboard');
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
   const [bulkEmailVisible, setBulkEmailVisible] = useState(false);
   const [bulkWhatsAppVisible, setBulkWhatsAppVisible] = useState(false);
@@ -151,29 +158,28 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleBulkEmail = async () => {
+  const handleBulkEmail = async (params: {subject: string, message: string, leadIds: string[]}) => {
     try {
       await API.post("/leads/bulk-email", {
-        ...emailContent,
-        leadIds: selectedLeads.length > 0 ? selectedLeads : "all"
+        subject: params.subject,
+        message: params.message,
+        leadIds: params.leadIds.length > 0 ? params.leadIds : "all"
       });
       alert("Broadcast successful");
       setBulkEmailVisible(false);
-      setSelectedLeads([]);
     } catch (err) {
       alert("Failed to send broadcast");
     }
   };
 
-  const handleBulkWhatsApp = async () => {
+  const handleBulkWhatsApp = async (params: {message: string, leadIds: string[]}) => {
     try {
       await API.post("/leads/bulk-whatsapp", {
-        ...whatsAppContent,
-        leadIds: selectedLeads.length > 0 ? selectedLeads : "all"
+        message: params.message,
+        leadIds: params.leadIds.length > 0 ? params.leadIds : "all"
       });
       alert("WhatsApp messages initiated successfully!");
       setBulkWhatsAppVisible(false);
-      setWhatsAppContent({ message: "" });
     } catch (err) {
       alert("Failed to send bulk WhatsApp messages");
     }
@@ -323,39 +329,56 @@ export default function AdminDashboard() {
       <View style={styles.layoutContainer}>
         {isDesktop && (
           <View style={styles.sidebar}>
-            <Text style={styles.sidebarTitle}>C R M</Text>
-            <Divider style={styles.sidebarDivider} />
-            <List.Item 
-              title="Dashboard" 
-              left={() => <List.Icon icon="view-dashboard-outline" color="#0EA5E9" />} 
-              titleStyle={styles.sidebarItemText} 
-              onPress={() => setViewMode('employees')}
-            />
-            <List.Item 
-              title="Staff Grid" 
-              left={() => <List.Icon icon="account-group-outline" color="#0EA5E9" />} 
-              titleStyle={styles.sidebarItemText} 
-              onPress={() => setViewMode('employees')}
-            />
-            <List.Item 
-              title="Lead Queue" 
-              left={() => <List.Icon icon="target" color="#0EA5E9" />} 
-              titleStyle={styles.sidebarItemText} 
-              onPress={() => setViewMode('leads')}
-            />
+            <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 8}}>
+              <Avatar.Icon size={40} icon="earth" style={{backgroundColor: '#3B82F6', marginRight: 12}} color="#FFF" />
+              <View>
+                <Text style={{color: '#0F172A', fontSize: 20, fontWeight: '900', letterSpacing: 0.5}}>VisaCRM</Text>
+                <Text style={{color: '#64748B', fontSize: 10, fontWeight: '600'}}>Immigration Hub</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={viewMode === 'dashboard' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('dashboard')}>
+              <List.Icon icon="view-dashboard" color={viewMode === 'dashboard' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'dashboard' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Dashboard</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={viewMode === 'leads' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('leads')}>
+              <List.Icon icon="account-group" color={viewMode === 'leads' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'leads' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Leads</Text>
+              <View style={{flex: 1}} />
+              <Chip textStyle={{fontSize: 10, color: '#FFF'}} style={{backgroundColor: 'rgba(255,255,255,0.2)', height: 20, borderRadius: 10}}>{leads.length}</Chip>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={viewMode === 'import' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('import')}>
+              <List.Icon icon="database-import" color={viewMode === 'import' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'import' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Import Leads</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={viewMode === 'employees' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('employees')}>
+              <List.Icon icon="account-group" color={viewMode === 'employees' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'employees' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Team Staff</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={viewMode === 'whatsapp' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('whatsapp')}>
+              <List.Icon icon="message-text-outline" color={viewMode === 'whatsapp' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'whatsapp' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Messaging</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={viewMode === 'settings' ? styles.sidebarItemActive : styles.sidebarItem} onPress={() => setViewMode('settings')}>
+              <List.Icon icon="cog" color={viewMode === 'settings' ? "#FFF" : "#64748B"} style={{margin: 0, marginRight: 12}} />
+              <Text style={viewMode === 'settings' ? styles.sidebarItemTextActive : styles.sidebarItemText}>Settings</Text>
+            </TouchableOpacity>
+
             <View style={{ flex: 1 }} />
-            <List.Item 
-              title="Profile" 
-              left={() => <List.Icon icon="account-circle-outline" color="#64748B" />} 
-              titleStyle={{ color: '#64748B' }} 
-              onPress={() => router.push("/(tabs)/adminProfile")}
-            />
-            <List.Item 
-              title="Log out" 
-              left={() => <List.Icon icon="logout" color="#EF4444" />} 
-              titleStyle={{ color: '#EF4444' }} 
-              onPress={logout}
-            />
+            
+            <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', padding: 12, borderRadius: 16, marginBottom: 12}}>
+              <Avatar.Text size={36} label={user?.name?.[0] || 'A'} style={{backgroundColor: '#3B82F6'}} color="#FFF" />
+              <View style={{marginLeft: 12, flex: 1}}>
+                <Text style={{color: '#0F172A', fontWeight: 'bold', fontSize: 14}} numberOfLines={1}>{user?.name || 'Admin'}</Text>
+                <Text style={{color: '#64748B', fontSize: 10, fontWeight: '700'}}>ADMINISTRATOR</Text>
+              </View>
+              <IconButton icon="logout" size={20} iconColor="#EF4444" onPress={logout} style={{margin: 0}} />
+            </View>
           </View>
         )}
 
@@ -365,357 +388,17 @@ export default function AdminDashboard() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EA5E9" />}
         >
           <View style={styles.responsiveWrapper}>
-          
-          {/* Dashboard Hero / Stats Summary */}
-          <View style={styles.heroSection}>
-            <View style={styles.heroHeader}>
-              <Text variant="headlineMedium" style={styles.heroTitle}>System Overview</Text>
-              {!isDesktop && (
-                <SegmentedButtons
-                  value={viewMode}
-                  onValueChange={v => setViewMode(v as any)}
-                  style={styles.viewSwitcher}
-                  theme={{ colors: { secondaryContainer: 'rgba(14, 165, 233, 0.2)', onSecondaryContainer: '#0EA5E9', outline: 'rgba(14, 165, 233, 0.5)' } }}
-                  buttons={[
-                    { value: 'employees', label: 'Staff', icon: 'account-group', checkedColor: '#0EA5E9', uncheckedColor: '#64748B' },
-                    { value: 'leads', label: 'Leads', icon: 'target', checkedColor: '#0EA5E9', uncheckedColor: '#64748B' },
-                  ]}
-                />
-              )}
-            </View>
-            
-            <View style={styles.gridRow}>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('staff')} style={{flex: 1, minWidth: 140}}>
-                <Surface style={[styles.statCard, { borderLeftColor: '#0EA5E9', shadowColor: '#000', flex: 1 }]} elevation={2}>
-                  <IconButton icon="account-tie" iconColor="#0EA5E9" size={24} style={styles.statIcon} />
-                  <View>
-                    <Text variant="displaySmall" style={[styles.statValue, { color: '#0EA5E9' }]}>{employees.length}</Text>
-                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL STAFF</Text>
-                  </View>
-                </Surface>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('contacted')} style={{flex: 1, minWidth: 140}}>
-                <Surface style={[styles.statCard, { borderLeftColor: '#b537f2', shadowColor: '#000', flex: 1 }]} elevation={2}>
-                  <IconButton icon="account-check-outline" iconColor="#b537f2" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(181, 55, 242, 0.1)'}]} />
-                  <View>
-                    <Text variant="displaySmall" style={[styles.statValue, { color: '#b537f2' }]}>
-                      {employees.reduce((acc, curr) => acc + (Number(curr.contacted_count) || 0), 0)}
-                    </Text>
-                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONTACTED</Text>
-                  </View>
-                </Surface>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('converted')} style={{flex: 1, minWidth: 140}}>
-                <Surface style={[styles.statCard, { borderLeftColor: '#00E676', shadowColor: '#000', flex: 1 }]} elevation={2}>
-                  <IconButton icon="currency-usd" iconColor="#00E676" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(0, 230, 118, 0.1)'}]} />
-                  <View>
-                    <Text variant="displaySmall" style={[styles.statValue, { color: '#00E676' }]}>
-                      {employees.reduce((acc, curr) => acc + (Number(curr.converted_count) || 0), 0)}
-                    </Text>
-                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL CONVERTED</Text>
-                  </View>
-                </Surface>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('leads')} style={{flex: 1, minWidth: 140}}>
-                <Surface style={[styles.statCard, { borderLeftColor: '#FF007F', shadowColor: '#000', flex: 1 }]} elevation={2}>
-                  <IconButton icon="database-outline" iconColor="#FF007F" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(255, 0, 127, 0.1)'}]} />
-                  <View>
-                    <Text variant="displaySmall" style={[styles.statValue, { color: '#FF007F' }]}>
-                      {leads.length}
-                    </Text>
-                    <Text variant="labelMedium" style={styles.statLabel}>TOTAL LEADS</Text>
-                  </View>
-                </Surface>
-              </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={() => openDownloadModal('unallocated')} style={{flex: 1, minWidth: 140}}>
-                <Surface style={[styles.statCard, { borderLeftColor: '#FF3D00', shadowColor: '#000', flex: 1 }]} elevation={2}>
-                  <IconButton icon="alert-circle-outline" iconColor="#FF3D00" size={24} style={[styles.statIcon, {backgroundColor: 'rgba(255, 61, 0, 0.1)'}]} />
-                  <View>
-                    <Text variant="displaySmall" style={[styles.statValue, { color: '#FF3D00' }]}>
-                      {leads.filter(l => !l.assigned_to).length}
-                    </Text>
-                    <Text variant="labelMedium" style={styles.statLabel}>UNALLOCATED</Text>
-                  </View>
-                </Surface>
-              </TouchableOpacity>
-            </View>
+            {viewMode === 'dashboard' && <DashboardOverview leads={leads} employees={employees} openDownloadModal={openDownloadModal} />}
+            {viewMode === 'leads' && <LeadsView leads={filteredLeads} filters={leadFilters} setFilters={setLeadFilters} setAddLeadVisible={setAddLeadVisible} setSelectedLead={setSelectedLead} setAssignVisible={setAssignVisible} />}
+            {viewMode === 'employees' && <EmployeeMatrix employees={employees} approve={approve} fetchEmployeeDetails={fetchEmployeeDetails} />}
+            {viewMode === 'import' && <ImportLeads handleFileUpload={handleFileUpload} />}
+            {viewMode === 'whatsapp' && <WhatsAppMessaging leads={leads} handleBulkWhatsApp={handleBulkWhatsApp} handleBulkEmail={handleBulkEmail} emailContent={emailContent} setEmailContent={setEmailContent} />}
+            {viewMode === 'settings' && <SettingsView />}
           </View>
-
-          {/* Core Tools Section */}
-          <Surface style={styles.toolsSurface} elevation={2}>
-            <View style={styles.toolsHeader}>
-              <Text variant="titleLarge" style={styles.sectionHeading}>Command Protocols</Text>
-              {selectedLeads.length > 0 && (
-                <Button 
-                  mode="contained" 
-                  icon="account-multiple-plus" 
-                  buttonColor="rgba(181, 55, 242, 0.8)"
-                  onPress={() => setAssignVisible(true)}
-                  style={styles.bulkAssignBtn}
-                >
-                  Assign {selectedLeads.length} Selected
-                </Button>
-              )}
-            </View>
-            <View style={styles.toolsGrid}>
-              <Button 
-                icon="account-plus" 
-                mode="contained" 
-                buttonColor="rgba(255, 193, 7, 0.15)"
-                onPress={() => setAddLeadVisible(true)}
-                style={[styles.toolBtn, { borderColor: '#FFC107', borderWidth: 1 }]}
-                contentStyle={styles.toolBtnContent}
-                textColor="#FFC107"
-              >
-                Add Lead
-              </Button>
-              {Platform.OS === 'web' && (
-                <Button 
-                  icon="file-upload-outline" 
-                  mode="contained-tonal" 
-                  onPress={() => (document.getElementById('csv-upload') as any)?.click()}
-                  style={styles.toolBtn}
-                  contentStyle={styles.toolBtnContent}
-                >
-                  Import Leads
-                </Button>
-              )}
-              <input type="file" id="csv-upload" style={{ display: 'none' }} accept=".csv" onChange={handleFileUpload} />
-              
-              <Button 
-                icon="email-plus-outline" 
-                mode="contained" 
-                buttonColor="rgba(14, 165, 233, 0.15)"
-                onPress={() => setBulkEmailVisible(true)}
-                style={[styles.toolBtn, { borderColor: '#0EA5E9', borderWidth: 1 }]}
-                contentStyle={styles.toolBtnContent}
-                textColor="#0EA5E9"
-              >
-                {selectedLeads.length > 0 ? 'Email Selected' : 'Broadcast Email'}
-              </Button>
-              
-              <Button 
-                icon="whatsapp" 
-                mode="contained" 
-                buttonColor="rgba(0, 230, 118, 0.15)"
-                onPress={() => setBulkWhatsAppVisible(true)}
-                style={[styles.toolBtn, { borderColor: '#00E676', borderWidth: 1 }]}
-                contentStyle={styles.toolBtnContent}
-                textColor="#00E676"
-              >
-                Bulk WhatsApp
-              </Button>
-            </View>
-          </Surface>
-
-          {/* Lists Section */}
-          <View style={styles.listsContainer}>
-            {viewMode === 'employees' ? (
-              /* Employee Management */
-              <View style={styles.listSection}>
-                <View style={styles.listHeader}>
-                  <Text variant="titleMedium" style={styles.listTitle}>Staff Matrix</Text>
-                  <Chip icon="check-circle" style={styles.countChip} textStyle={{color: '#0EA5E9'}}>{employees.length}</Chip>
-                </View>
-                <View style={styles.itemGrid}>
-                  {employees.map((e) => (
-                    <TouchableOpacity key={e.id} onPress={() => fetchEmployeeDetails(e)} style={styles.employeeCardWrapper}>
-                      <Card style={styles.modernCard} mode="elevated">
-                        <Card.Content style={styles.modernCardContent}>
-                          <Avatar.Text size={48} label={e.name.substring(0, 2).toUpperCase()} style={styles.avatar} />
-                          <View style={styles.cardInfo}>
-                            <Text variant="titleMedium" style={styles.userName}>{e.name}</Text>
-                            <View style={styles.empStatsRow}>
-                              <Text variant="labelSmall" style={{color: '#b537f2'}}>Contacted: {e.contacted_count || 0}</Text>
-                              <Text variant="labelSmall" style={{color: '#00E676'}}>  •  Converted: {e.converted_count || 0}</Text>
-                            </View>
-                          </View>
-                          <View style={styles.cardAction}>
-                            {e.status === "pending" ? (
-                              <Button mode="contained" onPress={(evt) => { evt.stopPropagation(); approve(e.id); }} buttonColor="#0EA5E9" textColor="#F0F9FF" style={styles.actionButton}>Authorize</Button>
-                            ) : (
-                              <Chip textStyle={{ color: '#00E676' }} style={styles.statusChip}>Online</Chip>
-                            )}
-                          </View>
-                        </Card.Content>
-                      </Card>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              /* Lead Queue */
-              <View style={styles.listSection}>
-                <View style={styles.listHeader}>
-                  <View>
-                    <Text variant="titleMedium" style={styles.listTitle}>Lead Database</Text>
-                    <Text variant="bodySmall" style={{ color: '#0EA5E9', opacity: 0.7 }}>Query nodes below</Text>
-                  </View>
-                  <Chip icon="trending-up" style={styles.countChip} textStyle={{color: '#0EA5E9'}}>{filteredLeads.length}</Chip>
-                </View>
-
-                {/* Filter Bar */}
-                <Surface style={styles.filterBar} elevation={1}>
-                  <TextInput 
-                    placeholder="Name" 
-                    value={leadFilters.name} 
-                    onChangeText={t => setLeadFilters({...leadFilters, name: t})}
-                    mode="outlined" 
-                    style={styles.filterInput} 
-                    dense
-                    left={<TextInput.Icon icon="magnify" />}
-                  />
-                  <TextInput 
-                    placeholder="Source" 
-                    value={leadFilters.source} 
-                    onChangeText={t => setLeadFilters({...leadFilters, source: t})}
-                    mode="outlined" 
-                    style={styles.filterInput} 
-                    dense
-                  />
-                  <TextInput 
-                    placeholder="Phone" 
-                    value={leadFilters.phone} 
-                    onChangeText={t => setLeadFilters({...leadFilters, phone: t})}
-                    mode="outlined" 
-                    style={styles.filterInput} 
-                    dense
-                  />
-                  <TextInput 
-                    placeholder="YYYY-MM-DD" 
-                    value={leadFilters.date} 
-                    onChangeText={t => setLeadFilters({...leadFilters, date: t})}
-                    mode="outlined" 
-                    style={styles.filterInput} 
-                    dense
-                    left={<TextInput.Icon icon="calendar" />}
-                  />
-                </Surface>
-                  <View style={styles.assignmentFilterRow}>
-                  <SegmentedButtons
-                    value={leadFilters.assignment}
-                    onValueChange={v => setLeadFilters({...leadFilters, assignment: v})}
-                    style={styles.assignmentSegment}
-                    theme={{ colors: { secondaryContainer: 'rgba(14, 165, 233, 0.2)', onSecondaryContainer: '#0EA5E9', outline: 'rgba(14, 165, 233, 0.3)' } }}
-                    buttons={[
-                      { value: 'all', label: 'All Leads', checkedColor: '#0EA5E9', uncheckedColor: '#64748B' },
-                      { value: 'assigned', label: 'Assigned', checkedColor: '#0EA5E9', uncheckedColor: '#64748B' },
-                      { value: 'unallocated', label: 'Unallocated', checkedColor: '#0EA5E9', uncheckedColor: '#64748B' },
-                    ]}
-                  />
-                  {(leadFilters.name || leadFilters.source || leadFilters.phone || leadFilters.date || leadFilters.assignment !== 'all') && (
-                    <Button 
-                      mode="text" 
-                      onPress={() => setLeadFilters({name:"", source:"", phone:"", date:"", assignment: 'all'})}
-                      textColor="#EF4444"
-                      icon="filter-variant-remove"
-                    >
-                      Clear
-                    </Button>
-                  )}
-                </View>
-
-                <View style={styles.itemGrid}>
-                  {filteredLeads.map((l) => (
-                    <Surface 
-                      key={l.id} 
-                      style={[
-                        styles.leadSurface, 
-                        selectedLeads.includes(l.id) && styles.selectedLeadSurface
-                      ]} 
-                      elevation={1}
-                    >
-                      <View style={styles.leadMain}>
-                        <IconButton 
-                          icon={selectedLeads.includes(l.id) ? "checkbox-marked" : "checkbox-blank-outline"} 
-                          iconColor={selectedLeads.includes(l.id) ? "#0EA5E9" : (l.assigned_to ? "#64748B" : "#0F172A")}
-                          onPress={() => !l.assigned_to && toggleLeadSelection(l.id)}
-                          disabled={!!l.assigned_to}
-                        />
-                        <View style={styles.leadMeta}>
-                          <Text variant="titleMedium" style={[styles.leadName, !!l.assigned_to && { color: '#64748B' }]}>{l.name}</Text>
-                          <View style={styles.sourceTag}>
-                            <IconButton icon={l.source?.toLowerCase().includes('facebook') ? 'facebook' : 'instagram'} size={14} style={{ margin: 0 }} iconColor="#64748B" />
-                            <Text variant="labelSmall" style={styles.sourceText}>{l.source || 'Direct'}</Text>
-                            <Text variant="labelSmall" style={styles.sourceText}>{'     Purpose: '+l.query}</Text>
-                          </View>
-                        </View>
-                        {!l.assigned_to && !selectedLeads.includes(l.id) && (
-                          <IconButton 
-                            icon="account-plus-outline" 
-                            mode="contained-tonal"
-                            containerColor="rgba(14, 165, 233, 0.15)"
-                            iconColor="#0EA5E9"
-                            onPress={() => { setSelectedLead(l.id); setAssignVisible(true); }}
-                          />
-                        )}
-                      </View>
-                      <Divider style={{ marginVertical: 8, backgroundColor: 'rgba(255,255,255,0.05)' }} />
-                      <View style={styles.leadFooter}>
-                        <View style={{ flex: 1, paddingRight: 12 }}>
-                          <Text variant="labelSmall" style={styles.phoneText}>{l.phone}</Text>
-                          <Text variant="labelSmall" style={[styles.phoneText, { color: '#64748B' }]} numberOfLines={1} ellipsizeMode="tail">{l.email}</Text>
-                        </View>
-                        <Chip 
-                          style={[
-                            styles.assignChip, 
-                            l.assigned_to ? styles.assignedChip : styles.unallocatedChip
-                          ]}
-                          textStyle={[
-                            styles.assignChipText,
-                            { color: l.assigned_to ? '#00E676' : '#EF4444' }
-                          ]}
-                          icon={() => <IconButton icon={l.assigned_to ? "account-check" : "account-clock-outline"} size={12} style={{ margin: 0 }} iconColor={l.assigned_to ? "#00E676" : "#EF4444"}/>}
-                        >
-                          {l.assigned_to ? 'Assigned' : 'Unallocated'}
-                        </Chip>
-                      </View>
-                    </Surface>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-        <View style={{ height: 40 }} />
+        </ScrollView>
 
         {/* Portals */}
         <Portal>
-          <Dialog visible={bulkEmailVisible} onDismiss={() => setBulkEmailVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
-            <Dialog.Title style={styles.dialogTitle}>Broadcast Email</Dialog.Title>
-            <Dialog.Content>
-              <TextInput label="Subject" value={emailContent.subject} onChangeText={t => setEmailContent({...emailContent, subject: t})} mode="outlined" style={styles.dialogInput} textColor="#000" />
-              <TextInput label="Message" multiline numberOfLines={5} value={emailContent.message} onChangeText={t => setEmailContent({...emailContent, message: t})} mode="outlined" style={styles.dialogInput} textColor="#000" />
-            </Dialog.Content>
-            <Dialog.Actions style={{ paddingHorizontal: 20 }}>
-              <Button onPress={() => setBulkEmailVisible(false)}>Cancel</Button>
-              <Button mode="contained" onPress={handleBulkEmail} buttonColor="#1A237E" textColor="white" style={{ flex: 1, borderRadius: 12 }}>Send Broadcast</Button>
-            </Dialog.Actions>
-          </Dialog>
-
-          <Dialog visible={bulkWhatsAppVisible} onDismiss={() => setBulkWhatsAppVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
-            <Dialog.Title style={styles.dialogTitle}>Broadcast WhatsApp</Dialog.Title>
-            <Dialog.Content>
-              <Text variant="bodySmall" style={styles.dialogSubtitle}>
-                Twilio Sandbox Note: Recipients must have joined your sandbox (e.g., "join your-keyword").
-              </Text>
-              <TextInput 
-                label="Message Content" 
-                multiline 
-                numberOfLines={5} 
-                value={whatsAppContent.message} 
-                onChangeText={t => setWhatsAppContent({...whatsAppContent, message: t})} 
-                mode="outlined" 
-                style={styles.dialogInput} 
-                textColor="#000" 
-              />
-            </Dialog.Content>
-            <Dialog.Actions style={{ paddingHorizontal: 20 }}>
-              <Button onPress={() => setBulkWhatsAppVisible(false)}>Cancel</Button>
-              <Button mode="contained" onPress={handleBulkWhatsApp} buttonColor="#25D366" textColor="white" style={{ flex: 1, borderRadius: 12 }}>Send WhatsApp</Button>
-            </Dialog.Actions>
-          </Dialog>
-
           <Dialog visible={assignVisible} onDismiss={() => setAssignVisible(false)} style={[styles.dialog, styles.portfolioDialog]}>
             <Dialog.Title style={styles.dialogTitle}>
               {selectedLead ? 'Allocate Lead' : `Bulk Allocate (${selectedLeads.length} Leads)`}
@@ -864,7 +547,6 @@ export default function AdminDashboard() {
             </Dialog.Actions>
           </Dialog>
         </Portal>
-      </ScrollView>
       </View>
     </View>
   );
@@ -902,9 +584,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(14, 165, 233, 0.2)',
     marginBottom: 16,
   },
+  sidebarItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  sidebarItemActive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    marginBottom: 8,
+  },
   sidebarItemText: {
-    color: '#0F172A',
+    color: '#64748B',
     fontWeight: '600',
+    fontSize: 14,
+  },
+  sidebarItemTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
   container: {
     flex: 1,
